@@ -1,0 +1,12 @@
+{
+  "key": "smsStatusChannel",
+  "name": "SMS Status Channel",
+  "description": "Inbound channel for receiving status updates on sent SMS",
+  "channelType": "inbound",
+  "type": "kafka",
+  "topics": [ "sms-status" ],
+  "deserializerType": "json",
+  "channelEventKeyDetection": {
+    "fixedValue": "sms-status"
+  }
+}

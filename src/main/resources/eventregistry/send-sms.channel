@@ -1,0 +1,9 @@
+{
+  "key": "sendSmsChannel",
+  "name": "Send SMS Channel",
+  "description": "Outbound channel for sending SMS to gateway",
+  "channelType": "outbound",
+  "type": "kafka",
+  "topic": "send-sms",
+  "serializerType": "json"
+}

@@ -1,0 +1,12 @@
+{
+  "key": "scheduleSmsChannel",
+  "name": "Schedule SMS Channel",
+  "description": "Inbound channel for scheduling an SMS",
+  "channelType": "inbound",
+  "type": "kafka",
+  "topics": [ "schedule-sms" ],
+  "deserializerType": "json",
+  "channelEventKeyDetection": {
+    "fixedValue": "schedule-sms"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "key": "sendSmsEvent",
+  "name": "Send SMS Event",
+  "outboundChannelKeys": [
+    "sendSmsChannel"
+  ],
+  "correlationParameters": [
+    { "name": "correlId", "type": "string" }
+  ],
+  "payload": [
+    { "name": "correlId", "type": "string" },
+    { "name": "clientId", "type": "string" },
+    { "name": "message", "type": "string" }
+  ]
+}

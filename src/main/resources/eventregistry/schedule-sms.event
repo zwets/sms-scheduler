@@ -1,0 +1,16 @@
+{
+  "key": "scheduleSmsEvent",
+  "name": "Schedule SMS Event",
+  "inboundChannelKeys": [
+    "scheduleSmsChannel"
+  ],
+  "correlationParameters": [
+  ],
+  "payload": [
+    { "name": "clientId", "type": "string" },
+    { "name": "uniqueId", "type": "string" },
+    { "name": "targetId", "type": "string" },
+    { "name": "schedule", "type": "string" },
+    { "name": "payload", "type": "string" }
+  ]
+}

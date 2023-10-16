@@ -1,0 +1,16 @@
+{
+  "key": "sms-status",
+  "name": "SMS Status",
+  "inboundChannelKeys": [
+    "smsStatusChannel"
+  ],
+  "correlationParameters": [
+    { "name": "correlId", "type": "string" }
+  ],
+  "payload": [
+    { "name": "correlId", "type": "string" },
+    { "name": "status", "type": "string" },
+    { "name": "errorCode", "type": "integer" },
+    { "name": "errorDescription", "type": "string" }
+  ]
+}
