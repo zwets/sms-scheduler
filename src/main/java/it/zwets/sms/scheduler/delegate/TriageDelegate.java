@@ -1,18 +1,17 @@
 package it.zwets.sms.scheduler.delegate;
 
-import java.util.Date;
+import java.time.Instant;
 
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
-import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import it.zwets.sms.scheduler.Constants;
+import it.zwets.sms.scheduler.Schedule;
 import it.zwets.sms.scheduler.util.DateHelper;
-import it.zwets.sms.scheduler.util.ScheduleHelper;
 
 
 /**
@@ -40,26 +39,26 @@ public class TriageDelegate implements JavaDelegate {
 		String instanceId = execution.getProcessInstanceBusinessKey();
 		
 		String smsStatus = execution.hasVariable(Constants.VAR_SMS_STATUS) ?
-				execution.getVariable(Constants.VAR_SMS_STATUS, String.class) : null;
+				execution.getVariable(Constants.VAR_SMS_STATUS, String.class) : Constants.SMS_STATUS_UNBORN;
 				
-		int retryCount = execution.hasVariable(Constants.VAR_RETRY_COUNT) ?
-				execution.getVariable(Constants.VAR_RETRY_COUNT, Integer.class) : -1;
+		int retryCount = execution.hasVariable(Constants.VAR_SMS_RETRIES) ?
+				execution.getVariable(Constants.VAR_SMS_RETRIES, Integer.class) : -1;
 		
-		ScheduleHelper smsSchedule = new ScheduleHelper(
-				execution.getVariable(Constants.VAR_SMS_SCHEDULE, String.class));
+		Schedule smsSchedule = execution.getVariable(Constants.VAR_SMS_SCHEDULE, Schedule.class);
 
+		Instant dueTime;
 		if (retryCount == -1) { // first time around
-			Date smsDueTime = smsSchedule.nextAvailable();
+			dueTime = smsSchedule.getFirstAvailableInstant();
 		}
 		else {
-			Date prevDueTime = retryCount != -1 ?
-					execution.getVariable(Constants.VAR_SMS_DUETIME, Date.class) : null;
+			Instant prevDueTime = execution.getVariable(Constants.VAR_SMS_DUETIME, Instant.class);
+			dueTime = prevDueTime.plusSeconds(15 * 60);
 		}		
 		
             // Set the result ID on the execution
         
-		execution.setVariable(Constants.VAR_RETRY_COUNT, retryCount + 1);
-//		execution.setVariable(Constants.VAR_SMS_DUETIME, smsDueTime);
+		execution.setVariable(Constants.VAR_SMS_RETRIES, retryCount + 1);
+		execution.setVariable(Constants.VAR_SMS_DUETIME, dueTime);
 		
 //        	LOG.info("Schedule SMS triaged: {}, count {}", 
 //                VAR_RPT_CONTENT_ID, reportItem.getId(), reportItem.getContentStoreId() );

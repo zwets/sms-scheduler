@@ -20,7 +20,7 @@
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
       <timerEventDefinition>
-        <timeDate>${scheduledTime}</timeDate>
+        <timeDate>${smsDueTime}</timeDate>
       </timerEventDefinition>
     </intermediateCatchEvent>
     <serviceTask id="sendSmsService" name="SEND" flowable:async="true" flowable:exclusive="false" flowable:type="send-event">
@@ -55,7 +55,6 @@ RECV">
     </intermediateCatchEvent>
     <exclusiveGateway id="orGwy3" default="retryLoop"></exclusiveGateway>
     <startEvent id="startEvent"></startEvent>
-    <sequenceFlow id="toEnroute" sourceRef="sendTimeout" targetRef="endEnroute"></sequenceFlow>
     <endEvent id="endExpired" name="EXPIRED">
       <extensionElements>
         <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
@@ -80,26 +79,12 @@ RECV">
       </extensionElements>
       <terminateEventDefinition></terminateEventDefinition>
     </endEvent>
-    <sequenceFlow id="toExpired" sourceRef="orGwy1" targetRef="endExpired">
-      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "FAILED"}]]></conditionExpression>
-    </sequenceFlow>
-    <sequenceFlow id="toScheduler" sourceRef="orGwy1" targetRef="schedulerTimer"></sequenceFlow>
     <sequenceFlow id="fromTriage" sourceRef="triageService" targetRef="orGwy1"></sequenceFlow>
     <sequenceFlow id="toTriage" sourceRef="startEvent" targetRef="triageService"></sequenceFlow>
     <sequenceFlow id="toSent" sourceRef="timerRecvAck" targetRef="endSent"></sequenceFlow>
-    <sequenceFlow id="toSend" sourceRef="schedulerTimer" targetRef="sendSmsService"></sequenceFlow>
     <sequenceFlow id="toTimerAckRecv" sourceRef="evGwy" targetRef="timerRecvAck"></sequenceFlow>
     <sequenceFlow id="fromSend" sourceRef="sendSmsService" targetRef="orGwy2"></sequenceFlow>
     <sequenceFlow id="toAckRecv" sourceRef="evGwy" targetRef="recvAckRecv"></sequenceFlow>
-    <sequenceFlow id="fromAck2" sourceRef="recvAckRecv" targetRef="orGwy3"></sequenceFlow>
-    <sequenceFlow id="toEvGwy" sourceRef="orGwy2" targetRef="evGwy">
-      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "SENT"}]]></conditionExpression>
-    </sequenceFlow>
-    <sequenceFlow id="bypassAck2" sourceRef="orGwy2" targetRef="orGwy3">
-      <extensionElements>
-        <flowable:executionListener event="take" delegateExpression="${processLogger}"></flowable:executionListener>
-      </extensionElements>
-    </sequenceFlow>
     <sequenceFlow id="toDelivered" sourceRef="orGwy3" targetRef="endDelivered">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "DELIVERED"}]]></conditionExpression>
     </sequenceFlow>
@@ -113,6 +98,25 @@ RECV">
         <timeDuration>${ackSendTimeoutTODO}</timeDuration>
       </timerEventDefinition>
     </boundaryEvent>
+    <sequenceFlow id="toExpired" sourceRef="orGwy1" targetRef="endExpired">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "EXPIRED"}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toScheduler" sourceRef="orGwy1" targetRef="schedulerTimer"></sequenceFlow>
+    <sequenceFlow id="toSend" sourceRef="schedulerTimer" targetRef="sendSmsService"></sequenceFlow>
+    <sequenceFlow id="toEnroute" sourceRef="sendTimeout" targetRef="endEnroute">
+      <extensionElements>
+        <flowable:executionListener event="take" delegateExpression="${execution.setVariable(&quot;smsStatus&quot;,&quot;ENROUTE&quot;)}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="toEvGwy" sourceRef="orGwy2" targetRef="evGwy">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "SENT"}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="bypassAck2" sourceRef="orGwy2" targetRef="orGwy3">
+      <extensionElements>
+        <flowable:executionListener event="take" delegateExpression="${processLogger}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="fromAck2" sourceRef="recvAckRecv" targetRef="orGwy3"></sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_smsSchedulerProcess">
     <bpmndi:BPMNPlane bpmnElement="smsSchedulerProcess" id="BPMNPlane_smsSchedulerProcess">
@@ -193,15 +197,15 @@ RECV">
         <omgdi:waypoint x="821.2032813087626" y="119.16937382297552"></omgdi:waypoint>
         <omgdi:waypoint x="855.000380759817" y="118.91679631142821"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="fromAck2" id="BPMNEdge_fromAck2" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="20.5" flowable:targetDockerY="20.5">
-        <omgdi:waypoint x="736.5746588118427" y="118.90535550905341"></omgdi:waypoint>
-        <omgdi:waypoint x="782.0" y="119.1875"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="retryLoop" id="BPMNEdge_retryLoop" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="802.125" y="138.2579400529387"></omgdi:waypoint>
         <omgdi:waypoint x="802.125" y="327.0"></omgdi:waypoint>
         <omgdi:waypoint x="155.0" y="327.0"></omgdi:waypoint>
         <omgdi:waypoint x="155.0" y="157.95"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="fromAck2" id="BPMNEdge_fromAck2" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="20.5" flowable:targetDockerY="20.5">
+        <omgdi:waypoint x="736.5746588118427" y="118.90535550905341"></omgdi:waypoint>
+        <omgdi:waypoint x="782.0" y="119.1875"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="toScheduler" id="BPMNEdge_toScheduler" flowable:sourceDockerX="36.0" flowable:sourceDockerY="20.5" flowable:targetDockerX="16.0" flowable:targetDockerY="16.0">
         <omgdi:waypoint x="279.4471297836688" y="118.5"></omgdi:waypoint>

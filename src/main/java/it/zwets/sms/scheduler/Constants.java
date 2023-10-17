@@ -16,14 +16,16 @@ public class Constants {
 	public static final String VAR_CLIENT_ID = "clientId";
 	public static final String VAR_TARGET_ID = "targetId";
 	public static final String VAR_UNIQUE_ID = "uniqueId";
-
 	public static final String VAR_SMS_SCHEDULE = "smsSchedule";
+	public static final String VAR_SMS_PAYLOAD = "smsPayload";
+	
 	public static final String VAR_SMS_DUETIME = "smsDueTime";
 	public static final String VAR_SMS_STATUS = "smsStatus";
-	public static final String VAR_RETRY_COUNT = "smsRetryCount";
+	public static final String VAR_SMS_RETRIES = "smsRetries";
 	
 	// Values for VAR_SMS_STATUS
 	
+	public static final String SMS_STATUS_UNBORN = "UNBORN"; // TODO: remove or replace
 	public static final String SMS_STATUS_SCHEDULED = "SCHEDULED";
 	public static final String SMS_STATUS_ENROUTE = "ENROUTE";
 	public static final String SMS_STATUS_EXPIRED = "EXPIRED";

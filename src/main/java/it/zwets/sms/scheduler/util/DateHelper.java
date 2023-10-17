@@ -36,6 +36,10 @@ public class DateHelper {
 		return toTime(d, 12, 0);
 	}
 
+	public String toISO8601(Date d) {
+		return "TODO";
+	}
+	
 	/**
 	 * Return a new Date object that is d with its time changed.
 	 * @param d the date object to operate on, or null

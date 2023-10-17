@@ -3,12 +3,7 @@
  */
 package it.zwets.sms.scheduler.init;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Random;
-
 import org.flowable.common.engine.impl.identity.Authentication;
-import org.flowable.engine.IdentityService;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +12,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import it.zwets.sms.scheduler.Constants;
+import it.zwets.sms.scheduler.Schedule;
 
 /**
  * Initialises the SmsSchedulerProcess process variables.
@@ -48,10 +44,21 @@ public class SmsSchedulerProcessInitialiser extends AbstractProcessInitialiser {
 */		
 		
 		LOG.debug("USER ID: {}", Authentication.getAuthenticatedUserId());
+		
+			// Coming from the invoker, need to check
+		
 		String clientId = execution.getVariable(Constants.VAR_CLIENT_ID, String.class);
 		String targetId = execution.getVariable(Constants.VAR_TARGET_ID, String.class);
 		String uniqueId = execution.getVariable(Constants.VAR_UNIQUE_ID, String.class);
-
+		Schedule schedule = execution.getVariable(Constants.VAR_SMS_SCHEDULE, Schedule.class);
+		String payload = execution.getVariable(Constants.VAR_SMS_PAYLOAD, String.class);
+		
+			// Add the following
+		
+		initVariable(execution, Constants.VAR_SMS_RETRIES, -1);
+		initVariable(execution, Constants.VAR_SMS_STATUS, Constants.SMS_STATUS_UNBORN);
+		// NO: initVariable(execution, Constants.VAR_SMS_DUETIME, Constants.SMS_STATUS_UNBORN);
+				
 //		Date dueDate = execution.getVariable(VAR_REM_DUE_DATE, Date.class);
 //		boolean preBirth = execution.getVariable(VAR_REM_PRE_BIRTH, Boolean.class);
 //		int armId = execution.getVariable(VAR_REM_ARM_ID, Integer.class);

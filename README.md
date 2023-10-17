@@ -2,7 +2,7 @@
 
 _Secure and reliable scheduled delivery of SMS messages_
 
-**WORK IN PROGRESS**
+Very much **WORK IN PROGRESS**
 
 
 ## Background
@@ -58,7 +58,7 @@ Overview of Implementation
 #### License
 
 sms-scheduler - Secure and reliable scheduled delivery of SMS messages
-Copyright (C) 2023  Marco van Zwetselaar
+Copyright (C) 2023  Marco van Zwetselaar <io@zwets.it>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
