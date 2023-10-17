@@ -52,22 +52,16 @@ public class SmsSchedulerProcessInitialiser extends AbstractProcessInitialiser {
 		String uniqueId = execution.getVariable(Constants.VAR_UNIQUE_ID, String.class);
 		Schedule schedule = execution.getVariable(Constants.VAR_SMS_SCHEDULE, Schedule.class);
 		String payload = execution.getVariable(Constants.VAR_SMS_PAYLOAD, String.class);
-		
+
+		LOG.info("Process variables before initialisation: C:T:U:S:P {}:{}:{}:{}:P", 
+				clientId, targetId, uniqueId, schedule.toString().replaceAll(" ", "-"), payload);
+
 			// Add the following
 		
 		initVariable(execution, Constants.VAR_SMS_RETRIES, -1);
-		initVariable(execution, Constants.VAR_SMS_STATUS, Constants.SMS_STATUS_UNBORN);
+		initVariable(execution, Constants.VAR_SMS_STATUS, Constants.SMS_STATUS_NULL);
 		// NO: initVariable(execution, Constants.VAR_SMS_DUETIME, Constants.SMS_STATUS_UNBORN);
-				
-//		Date dueDate = execution.getVariable(VAR_REM_DUE_DATE, Date.class);
-//		boolean preBirth = execution.getVariable(VAR_REM_PRE_BIRTH, Boolean.class);
-//		int armId = execution.getVariable(VAR_REM_ARM_ID, Integer.class);
-//
-//		LOG.info("initialise reminder process for subject {} on arm {}, {} due at {}", 
-//				subjectId, armId, preBirth ? "birth" : vaxId, dueDate);
-//
-//			// Extract the relevant system properties
-//
+
 //		boolean testing = environment.getProperty(PROP_TEST_REMINDERS, Boolean.class, false);
 //		int hour = environment.getRequiredProperty(PROP_REM_HOUR, Integer.class);
 //
