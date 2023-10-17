@@ -2,40 +2,80 @@ package it.zwets.sms.scheduler.rest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import org.flowable.engine.runtime.ProcessInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import it.zwets.sms.scheduler.Schedule;
 import it.zwets.sms.scheduler.SmsSchedulerService;
+import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
 
 @RestController
 public class SmsSchedulerRestController {
+	
+	private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerRestController.class);
 
 	@Autowired
     private SmsSchedulerService theService;
 
-    @PostMapping(value="/schedule", consumes=MediaType.APPLICATION_JSON_VALUE)
-    public void scheduleSms(@RequestParam ScheduleArgs arg) {
-        theService.scheduleSms(arg.clientId, arg.targetId, arg.uniqueId, arg.schedule, arg.payload);
-    }
-
     @RequestMapping(value="/scheduled", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public List<PIRep> getProcessInstances(@RequestParam String clientId) {
-        List<ProcessInstance> pis = theService.getProcessInstances(clientId);
-        List<PIRep> dtos = new ArrayList<PIRep>();
-        for (ProcessInstance pi : pis) {
-            dtos.add(new PIRep(pi.getId(), pi.getName()));
-        }
-        return dtos;
+    public List<SmsStatus> getSmsStatuses(@RequestParam Map<String,String> params) {
+    	LOG.info("REST GET to /scheduled API");
+    	
+    	if (params.containsKey("client")) {
+    		if (params.containsKey("target")) {
+    			return theService.getStatusList(params.get("client"), params.get("target"));
+    		}
+    		else {
+    			return theService.getStatusList(params.get("client"));
+    		}
+    	}
+    	else {
+    		return new ArrayList<SmsStatus>();
+    	}
     }
 
+	@ResponseBody
+    @PostMapping(value="/schedule", consumes=MediaType.APPLICATION_JSON_VALUE)
+    public SmsStatus scheduleSms(@Validated @RequestBody ScheduleArgs arg) {
+    	LOG.info("REST POST to /schedule API");
+        
+    	return theService.scheduleSms(arg.clientId, arg.targetId, arg.uniqueId, arg.schedule, arg.payload);
+    }
+
+    @DeleteMapping(value="/cancel", produces=MediaType.APPLICATION_JSON_VALUE)
+    public List<SmsStatus> cancelSms(@RequestParam Map<String,String> params) {
+    	LOG.info("REST DELETE to /cancel API");
+    	
+    	if (params.containsKey("client")) {
+    		if (params.containsKey("unique")) {
+    			return theService.cancelSms(params.get("client"), params.get("unique"));
+    		}
+    		else if (params.containsKey("target")) {
+    			return theService.cancelTarget(params.get("client"), params.get("target"));
+    		}
+    		else {
+    			return theService.cancelAll(params.get("client"));
+    		}
+    	}
+    	else {
+    		return new ArrayList<SmsStatus>();
+    	}
+    }
+
+    
     static class ScheduleArgs {
     	
     	private String clientId;
@@ -74,29 +114,5 @@ public class SmsSchedulerRestController {
 		public void setPayload(String payload) {
 			this.payload = payload;
 		}	
-    }
-    
-    static class PIRep {
-
-        private String id;
-        private String name;
-
-        public PIRep(String id, String name) {
-            this.id = id;
-            this.name = name;
-        }
-
-        public String getId() {
-            return id;
-        }
-        public void setId(String id) {
-            this.id = id;
-        }
-        public String getName() {
-            return name;
-        }
-        public void setName(String name) {
-            this.name = name;
-        }
     }
 }
