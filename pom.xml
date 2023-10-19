@@ -37,11 +37,6 @@
          <version>${flowable.version}</version>
       </dependency>
       <dependency>
-         <groupId>org.flowable</groupId>
-         <artifactId>flowable-idm-rest</artifactId>
-         <version>${flowable.version}</version>
-      </dependency>
-      <dependency>
          <groupId>com.h2database</groupId>
          <artifactId>h2</artifactId>
          <scope>runtime</scope>

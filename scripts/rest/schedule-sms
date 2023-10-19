@@ -22,4 +22,4 @@ JSON="$(printf '{
 
 echo "$JSON" | jq .
 echo
-echo "$JSON" | rest_POST /schedule
+rest_POST /schedule "$JSON"

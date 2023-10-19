@@ -22,7 +22,7 @@ rest_POST() {
     -u "$USERNAME:$PASSWORD" \
     -H 'Accept: application/json' \
     -H 'Content-Type: application/json' \
-    -d - \
+    -d "$2" \
     "${BASE_URL}${1:-}" |
   jq .
 }
