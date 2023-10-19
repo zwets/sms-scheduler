@@ -67,7 +67,27 @@ public class SmsSchedulerService {
 		LOG.error("SmsSchedulerService::cancelAll(clientId={})", clientId);
 		throw new NotImplementedException("SmsScheduleService::cancelAll");
 	}
-	
+
+    @Transactional
+    public List<SmsStatus> getStatusList() {
+        LOG.info("SmsSchedulerService::getStatusList()");
+
+        return historyService
+            .createHistoricProcessInstanceQuery()
+            .processDefinitionKey(Constants.APP_PROCESS_NAME)
+            .orderByProcessInstanceStartTime().asc()
+            .includeProcessVariables()
+            .list().stream()
+            .map(hpi -> hpi.getProcessVariables())
+            .map(pvs -> new SmsStatus(
+                    (String) pvs.getOrDefault(Constants.VAR_CLIENT_ID, null),
+                    (String) pvs.getOrDefault(Constants.VAR_TARGET_ID, null),
+                    (String) pvs.getOrDefault(Constants.VAR_UNIQUE_ID, null),
+                    (String) pvs.getOrDefault(Constants.VAR_SMS_STATUS, null),
+                    (int) pvs.getOrDefault(Constants.VAR_SMS_RETRIES, -1)))
+            .toList();
+    }
+
     @Transactional
     public List<SmsStatus> getStatusList(String clientId) {
 		LOG.info("SmsSchedulerService::getStatusList(clientId={})", clientId);

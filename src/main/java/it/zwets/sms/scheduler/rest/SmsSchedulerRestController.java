@@ -25,98 +25,101 @@ import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
 @RestController
 public class SmsSchedulerRestController {
 
-	private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerRestController.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerRestController.class);
 
-	@Autowired
+    @Autowired
     private SmsSchedulerService theService;
 
-    @RequestMapping(value="/scheduled", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public List<SmsStatus> getSmsStatuses(@RequestParam Map<String,String> params) {
-    	LOG.info("REST GET to /scheduled API");
- 
-    	for (String key : params.keySet()) {
-    		LOG.info("Key {}: Value: {} ", key, params.get(key));
-    	}
- 
-    	if (params.containsKey("client")) {
-    		if (params.containsKey("target")) {
-    			return theService.getStatusList(params.get("client"), params.get("target"));
-    		}
-    		else {
-    			return theService.getStatusList(params.get("client"));
-    		}
-    	}
-    	else {
-    		return new ArrayList<SmsStatus>();
-    	}
+    @RequestMapping(value = "/scheduled", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<SmsStatus> getSmsStatuses(@RequestParam Map<String, String> params) {
+        LOG.info("REST GET to /scheduled API");
+
+        for (String key : params.keySet()) {
+            LOG.info("Key {}: Value: {} ", key, params.get(key));
+        }
+
+        if (params.containsKey("client")) {
+            if (params.containsKey("target")) {
+                return theService.getStatusList(params.get("client"), params.get("target"));
+            } else {
+                return theService.getStatusList(params.get("client"));
+            }
+        } else { // TODO: REMOVE (or move elsewhere) as it works across clients, so is admin only
+            return theService.getStatusList();
+        }
     }
 
-	@ResponseBody
-    @PostMapping(value="/schedule", consumes=MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    @PostMapping(value = "/schedule", consumes = MediaType.APPLICATION_JSON_VALUE)
     public SmsStatus scheduleSms(@Validated @RequestBody ScheduleArgs arg) {
-    	LOG.info("REST POST to /schedule API");
-        
-    	return theService.scheduleSms(arg.clientId, arg.targetId, arg.uniqueId, arg.schedule, arg.payload);
+        LOG.info("REST POST to /schedule API");
+
+        return theService.scheduleSms(arg.clientId, arg.targetId, arg.uniqueId, arg.schedule, arg.payload);
     }
 
-    @DeleteMapping(value="/cancel", produces=MediaType.APPLICATION_JSON_VALUE)
-    public List<SmsStatus> cancelSms(@RequestParam Map<String,String> params) {
-    	LOG.info("REST DELETE to /cancel API");
+    @DeleteMapping(value = "/cancel", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<SmsStatus> cancelSms(@RequestParam Map<String, String> params) {
+        LOG.info("REST DELETE to /cancel API");
 
-    	if (params.containsKey("client")) {
-    		if (params.containsKey("unique")) {
-    			return theService.cancelSms(params.get("client"), params.get("unique"));
-    		}
-    		else if (params.containsKey("target")) {
-    			return theService.cancelTarget(params.get("client"), params.get("target"));
-    		}
-    		else {
-    			return theService.cancelAll(params.get("client"));
-    		}
-    	}
-    	else {
-    		return new ArrayList<SmsStatus>();
-    	}
+        if (params.containsKey("client")) {
+            if (params.containsKey("unique")) {
+                return theService.cancelSms(params.get("client"), params.get("unique"));
+            } else if (params.containsKey("target")) {
+                return theService.cancelTarget(params.get("client"), params.get("target"));
+            } else {
+                return theService.cancelAll(params.get("client"));
+            }
+        } else {
+            return new ArrayList<SmsStatus>();
+        }
     }
 
-    
     static class ScheduleArgs {
 
-    	private String clientId;
-    	private String targetId;
-    	private String uniqueId;
-    	private Schedule schedule;
-    	private String payload;
+        private String clientId;
+        private String targetId;
+        private String uniqueId;
+        private Schedule schedule;
+        private String payload;
 
-		public String getClientId() {
-			return clientId;
-		}
-		public void setClientId(String clientId) {
-			this.clientId = clientId;
-		}
-		public String getTargetId() {
-			return targetId;
-		}
-		public void setTargetId(String targetId) {
-			this.targetId = targetId;
-		}
-		public String getUniqueId() {
-			return uniqueId;
-		}
-		public void setUniqueId(String uniqueId) {
-			this.uniqueId = uniqueId;
-		}
-		public Schedule getSchedule() {
-			return schedule;
-		}
-		public void setSchedule(Schedule schedule) {
-			this.schedule = schedule;
-		}
-		public String getPayload() {
-			return payload;
-		}
-		public void setPayload(String payload) {
-			this.payload = payload;
-		}
+        public String getClientId() {
+            return clientId;
+        }
+
+        public void setClientId(String clientId) {
+            this.clientId = clientId;
+        }
+
+        public String getTargetId() {
+            return targetId;
+        }
+
+        public void setTargetId(String targetId) {
+            this.targetId = targetId;
+        }
+
+        public String getUniqueId() {
+            return uniqueId;
+        }
+
+        public void setUniqueId(String uniqueId) {
+            this.uniqueId = uniqueId;
+        }
+
+        public Schedule getSchedule() {
+            return schedule;
+        }
+
+        public void setSchedule(Schedule schedule) {
+            this.schedule = schedule;
+        }
+
+        public String getPayload() {
+            return payload;
+        }
+
+        public void setPayload(String payload) {
+            this.payload = payload;
+        }
     }
 }
