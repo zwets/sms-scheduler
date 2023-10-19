@@ -1,6 +1,0 @@
-#!/bin/bash
-
-. "$(dirname "$0")/common.sh"
-
-(($# == 2)) || usage CLIENT UNIQUE
-rest_DELETE "/cancel?client=$1&unique=$2"

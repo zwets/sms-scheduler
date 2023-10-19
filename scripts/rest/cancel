@@ -1,0 +1,6 @@
+#!/bin/bash
+
+. "$(dirname "$0")/common.sh"
+
+(($# == 3)) || usage CLIENT TARGET UNIQUE
+rest_DELETE "/schedule/$1/$2/$3"

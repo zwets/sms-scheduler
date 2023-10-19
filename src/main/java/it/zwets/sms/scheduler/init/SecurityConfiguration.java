@@ -29,9 +29,9 @@ public class SecurityConfiguration {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(req -> req
 //                .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
-                .requestMatchers("/actuator/**").hasAuthority("ADMIN")
-                .requestMatchers("/admin/**").hasAuthority("ADMIN")
-                .anyRequest().authenticated());
+                .requestMatchers("/actuator/**", "/admin/**").hasAuthority("ADMIN")
+                .anyRequest().authenticated()
+             );
 
         return http.build();
     }

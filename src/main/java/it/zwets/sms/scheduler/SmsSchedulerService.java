@@ -7,6 +7,7 @@ import java.util.Map;
 import org.apache.commons.lang3.NotImplementedException;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.RuntimeService;
+import org.flowable.engine.history.HistoricProcessInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,29 +46,47 @@ public class SmsSchedulerService {
     }
 
 	@Transactional
-	public List<SmsStatus> cancelSms(String clientId, String uniqueId) {
-		LOG.info("SmsSchedulerService::cancelSms(clientId={}, uniqueId={})", clientId, uniqueId);
-
-		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelSms(clientId={}, uniqueId={})", clientId, uniqueId);
+	public void cancelSms(String clientId, String targetId, String uniqueId) {
+		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelSms( clientId={},targetId={},uniqueId={} )", clientId, targetId, uniqueId);
 		throw new NotImplementedException("SmsScheduleService::cancelSms");
 	}
 
 	@Transactional
-	public List<SmsStatus> cancelTarget(String clientId, String targetId) {
-		LOG.info("SmsSchedulerService::cancelTarget(clientId={}, targetId={})", clientId, targetId);
-
-		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelTarget(clientId={}, targetId={})", clientId, targetId);
-		throw new NotImplementedException("SmsScheduleService::cancelTarget");
-	}
-	
-	@Transactional
-	public List<SmsStatus> cancelAll(String clientId) {
-		LOG.info("SmsSchedulerService::cancelAll(clientId={})", clientId);
-		
-		LOG.error("SmsSchedulerService::cancelAll(clientId={})", clientId);
-		throw new NotImplementedException("SmsScheduleService::cancelAll");
+	public void cancelAllForClient(String clientId) {
+		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelAllForClient( clientId={} )", clientId);
+		throw new NotImplementedException("SmsScheduleService::cancelAllForClient");
 	}
 
+    @Transactional
+    public void cancelAllForTarget(String clientId, String targetId) {
+        LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelAllForTarget( clientId={}, targetId={} )", clientId, targetId);
+        throw new NotImplementedException("SmsScheduleService::cancelAllForTarget");
+    }
+    
+    @Transactional
+    public SmsStatus getSmsStatus(String clientId, String targetId, String uniqueId) {
+        LOG.info("SmsSchedulerService::getSmsStatus( clientId={}, targetId={}, uniqueId={} )");
+        
+        HistoricProcessInstance hpi = historyService.createHistoricProcessInstanceQuery()
+                .processDefinitionKey(Constants.APP_PROCESS_NAME)
+                .includeProcessVariables()
+                .singleResult();
+        
+        SmsStatus result = null;
+               
+        if (hpi != null) {
+            Map<String, Object> pvs = hpi.getProcessVariables();
+            result = new SmsStatus(
+                    (String) pvs.getOrDefault(Constants.VAR_CLIENT_ID, null),
+                    (String) pvs.getOrDefault(Constants.VAR_TARGET_ID, null),
+                    (String) pvs.getOrDefault(Constants.VAR_UNIQUE_ID, null),
+                    (String) pvs.getOrDefault(Constants.VAR_SMS_STATUS, null),
+                    (int) pvs.getOrDefault(Constants.VAR_SMS_RETRIES, -1));
+        }
+        
+        return result;
+    }
+    
     @Transactional
     public List<SmsStatus> getStatusList() {
         LOG.info("SmsSchedulerService::getStatusList()");

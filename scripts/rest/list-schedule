@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. "$(dirname "$0")/common.sh"
+
+rest_GET "/schedule${1:+/$1}${2:+/$2}${3:+$3}"

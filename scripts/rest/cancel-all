@@ -2,5 +2,5 @@
 
 . "$(dirname "$0")/common.sh"
 
-(($# == 1)) || usage CLIENT
-rest_DELETE "/cancel?client=$1"
+(($# == 1)) && [[ "$1" == 'yes-i-am-sure' ]] || usage "'yes-i-am-sure'"
+rest_DELETE "/schedule"
