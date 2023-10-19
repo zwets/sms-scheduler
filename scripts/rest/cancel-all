@@ -1,0 +1,6 @@
+#!/bin/bash
+
+. "$(dirname "$0")/common.sh"
+
+(($# == 1)) || usage CLIENT
+rest_DELETE "/cancel?client=$1"

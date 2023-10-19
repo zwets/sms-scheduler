@@ -59,7 +59,7 @@ public class SmsSchedulerProcessInitialiser extends AbstractProcessInitialiser {
 			// Add the following
 		
 		initVariable(execution, Constants.VAR_SMS_RETRIES, -1);
-		initVariable(execution, Constants.VAR_SMS_STATUS, Constants.SMS_STATUS_NULL);
+		initVariable(execution, Constants.VAR_SMS_STATUS, Constants.SMS_STATUS_NEW);
 		// NO: initVariable(execution, Constants.VAR_SMS_DUETIME, Constants.SMS_STATUS_UNBORN);
 
 //		boolean testing = environment.getProperty(PROP_TEST_REMINDERS, Boolean.class, false);

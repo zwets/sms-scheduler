@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. "$(dirname "$0")/common.sh"
+
+rest_GET "/scheduled${1+?client=$1}${2+&target=$2}"

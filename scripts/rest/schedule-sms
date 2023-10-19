@@ -1,0 +1,25 @@
+#!/bin/bash
+
+. "$(dirname "$0")/common.sh"
+
+(($# >= 6)) || usage CLIENT TARGET UNIQUE PAYLOAD FROM1 TILL1 ...
+
+CLIENT="$1"
+TARGET="$2"
+UNIQUE="$3"
+PAYLOAD="$4"
+shift 4
+SCHEDULE="$*"
+
+JSON="$(printf '{
+  "clientId": "%s",
+  "targetId": "%s",
+  "uniqueId": "%s",
+  "schedule": "%s",
+  "payload":  "%s"
+}
+' "$CLIENT" "$TARGET" "$UNIQUE" "$SCHEDULE" "${PAYLOAD/\"/\\\"}")"
+
+echo "$JSON" | jq .
+echo
+echo "$JSON" | rest_POST /schedule

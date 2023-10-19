@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.flowable.engine.HistoryService;
 import org.flowable.engine.RuntimeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,9 @@ public class SmsSchedulerService {
 	
 	@Autowired
 	private RuntimeService runtimeService;
+
+	@Autowired
+	private HistoryService historyService;
 
 	@Transactional
     public SmsStatus scheduleSms(
@@ -37,7 +41,7 @@ public class SmsSchedulerService {
         
 		runtimeService.startProcessInstanceByKey(Constants.APP_PROCESS_NAME, vars);
 		
-		return new SmsStatus(clientId, targetId, uniqueId, Constants.SMS_STATUS_SCHEDULED, 0);
+		return new SmsStatus(clientId, targetId, uniqueId, Constants.SMS_STATUS_NEW, 0);
     }
 
 	@Transactional
@@ -68,13 +72,14 @@ public class SmsSchedulerService {
     public List<SmsStatus> getStatusList(String clientId) {
 		LOG.info("SmsSchedulerService::getStatusList(clientId={})", clientId);
 
-		return runtimeService
-    		.createProcessInstanceQuery()
-    		.variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
-    		.includeProcessVariables()
-    		.list()
-    		.stream()
-    		.map(pi -> pi.getProcessVariables())
+		return historyService
+			.createHistoricProcessInstanceQuery()
+			.processDefinitionKey(Constants.APP_PROCESS_NAME)
+			.variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+			.orderByProcessInstanceStartTime().asc()
+			.includeProcessVariables()
+    		.list().stream()
+    		.map(hpi -> hpi.getProcessVariables())
     		.map(pvs -> new SmsStatus(
     				(String) pvs.getOrDefault(Constants.VAR_CLIENT_ID, null),
     				(String) pvs.getOrDefault(Constants.VAR_TARGET_ID, null),
@@ -88,13 +93,13 @@ public class SmsSchedulerService {
     public List<SmsStatus> getStatusList(String clientId, String targetId) {
 		LOG.info("SmsSchedulerService::getStatusList(clientId={}, targetId={})", clientId, targetId);
     	
-		return runtimeService
-        		.createProcessInstanceQuery()
-        		.variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
-        		.variableValueEquals(Constants.VAR_TARGET_ID, clientId)
+		return historyService
+        		.createHistoricProcessInstanceQuery()
+         		.variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+        		.variableValueEquals(Constants.VAR_TARGET_ID, targetId)
         		.includeProcessVariables()
-        		.list()
-        		.stream()
+    			.orderByProcessInstanceStartTime().asc()
+        		.list().stream()
         		.map(pi -> pi.getProcessVariables())
         		.map(pvs -> new SmsStatus(
         				(String) pvs.getOrDefault(Constants.VAR_CLIENT_ID, null),

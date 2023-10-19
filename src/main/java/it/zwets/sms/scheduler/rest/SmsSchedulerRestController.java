@@ -24,7 +24,7 @@ import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
 
 @RestController
 public class SmsSchedulerRestController {
-	
+
 	private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerRestController.class);
 
 	@Autowired
@@ -33,7 +33,11 @@ public class SmsSchedulerRestController {
     @RequestMapping(value="/scheduled", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public List<SmsStatus> getSmsStatuses(@RequestParam Map<String,String> params) {
     	LOG.info("REST GET to /scheduled API");
-    	
+ 
+    	for (String key : params.keySet()) {
+    		LOG.info("Key {}: Value: {} ", key, params.get(key));
+    	}
+ 
     	if (params.containsKey("client")) {
     		if (params.containsKey("target")) {
     			return theService.getStatusList(params.get("client"), params.get("target"));
@@ -58,7 +62,7 @@ public class SmsSchedulerRestController {
     @DeleteMapping(value="/cancel", produces=MediaType.APPLICATION_JSON_VALUE)
     public List<SmsStatus> cancelSms(@RequestParam Map<String,String> params) {
     	LOG.info("REST DELETE to /cancel API");
-    	
+
     	if (params.containsKey("client")) {
     		if (params.containsKey("unique")) {
     			return theService.cancelSms(params.get("client"), params.get("unique"));
@@ -77,13 +81,13 @@ public class SmsSchedulerRestController {
 
     
     static class ScheduleArgs {
-    	
+
     	private String clientId;
     	private String targetId;
     	private String uniqueId;
     	private Schedule schedule;
     	private String payload;
-    	
+
 		public String getClientId() {
 			return clientId;
 		}
@@ -113,6 +117,6 @@ public class SmsSchedulerRestController {
 		}
 		public void setPayload(String payload) {
 			this.payload = payload;
-		}	
+		}
     }
 }
