@@ -1,5 +1,6 @@
 package it.zwets.sms.scheduler.init;
 
+import org.flowable.idm.api.Group;
 import org.flowable.idm.api.IdmIdentityService;
 import org.flowable.idm.api.User;
 import org.flowable.spring.security.FlowableUserDetailsService;
@@ -8,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -25,13 +27,14 @@ public class SecurityConfiguration {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .sessionManagement(ses -> ses.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .httpBasic(bas -> bas.realmName("SMS Scheduler"))
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.disable())  // not needed for REST
             .authorizeHttpRequests(req -> req
 //                .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
-                .requestMatchers("/actuator/**", "/admin/**").hasAuthority("ADMIN")
-                .anyRequest().authenticated()
-             );
+                .requestMatchers("/actuator/**", "/admin/**").hasRole("admins")
+                .requestMatchers(HttpMethod.GET, "/schedule/**", "/admin/**").hasAuthority("ADMIN")
+                .anyRequest().denyAll())
+//                .anyRequest().authenticated()
+            .httpBasic(bas -> bas.realmName("SMS Scheduler"));
 
         return http.build();
     }
@@ -50,6 +53,12 @@ public class SecurityConfiguration {
         user.setEmail("io@zwets.it");
         identityService.saveUser(user);
 
+        Group group = identityService.newGroup("admins");
+        group.setName("SMS Scheduler Admins");
+        identityService.saveGroup(group);
+        
+        identityService.createMembership("admin", "admins");
+        
         return new FlowableUserDetailsService(identityService);
     }
 }

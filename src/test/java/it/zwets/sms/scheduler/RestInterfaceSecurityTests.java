@@ -37,6 +37,12 @@ class RestInterfaceSecurityTests {
     }
     
     @Test
+    public void getAdminUsersWorksForAdmin() {
+        ResponseEntity<String> response = adminRequest("/admin/users");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+    
+    @Test
     public void getScheduledRootRequiresAuth() {
         ResponseEntity<String> response = anonRequest("/scheduled");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
