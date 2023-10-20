@@ -1,4 +1,4 @@
-package it.zwets.sms.scheduler;
+package it.zwets.sms.scheduler.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

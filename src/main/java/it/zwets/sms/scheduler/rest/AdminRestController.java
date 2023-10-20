@@ -43,7 +43,7 @@ public class AdminRestController {
 
     @GetMapping(path = "users", produces = MediaType.APPLICATION_JSON_VALUE)
     public AdminService.AccountDetail[] getUsers() {
-        return adminService.getAccountsInGroup(AdminService.USERS_GROUP_NAME);
+        return adminService.getAccountsInGroup(AdminService.USERS_ROLE);
     }
     
     @GetMapping(path = "users/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -52,7 +52,7 @@ public class AdminRestController {
         if (account == null) {
             throw new HttpClientErrorException(HttpStatus.NOT_FOUND, "Account not found: ".concat(id));
         }
-        else if (!Arrays.asList(account.getGroups()).contains(AdminService.USERS_GROUP_NAME)) {
+        else if (!Arrays.asList(account.getGroups()).contains(AdminService.USERS_ROLE)) {
             throw new HttpClientErrorException(HttpStatus.NOT_FOUND, "Account not in users group: ".concat(id));
         }
         return account;
@@ -60,7 +60,7 @@ public class AdminRestController {
 
     @GetMapping(path = "admins", produces = MediaType.APPLICATION_JSON_VALUE)
     public AdminService.AccountDetail[] getAdmins() {
-        return adminService.getAccountsInGroup(AdminService.ADMINS_GROUP_NAME);
+        return adminService.getAccountsInGroup(AdminService.ADMINS_ROLE);
     }
     
     @GetMapping(path = "admins/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -69,20 +69,20 @@ public class AdminRestController {
         if (account == null) {
             throw new HttpClientErrorException(HttpStatus.NOT_FOUND, "Admin not found: ".concat(id));
         }
-        else if (!Arrays.asList(account.getGroups()).contains(AdminService.ADMINS_GROUP_NAME)) {
+        else if (!Arrays.asList(account.getGroups()).contains(AdminService.ADMINS_ROLE)) {
             throw new HttpClientErrorException(HttpStatus.NOT_FOUND, "Account not in admins group: ".concat(id));
         }
         return account;
     }
 
     @GetMapping(path = "clients", produces = MediaType.APPLICATION_JSON_VALUE)
-    public AdminService.ClientDetail[] getClients() {
+    public AdminService.GroupDetail[] getClients() {
         return adminService.getClients();
     }
     
     @GetMapping(path = "clients/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public AdminService.ClientDetail getClient(String id) {
-        AdminService.ClientDetail client = adminService.getClient(id);
+    public AdminService.GroupDetail getClient(String id) {
+        AdminService.GroupDetail client = adminService.getClient(id);
         if (client == null) {
             throw new HttpClientErrorException(HttpStatus.NOT_FOUND, "Client not found: ".concat(id));
         }
@@ -90,13 +90,13 @@ public class AdminRestController {
     }
 
     @GetMapping(path = "groups", produces = MediaType.APPLICATION_JSON_VALUE)
-    public AdminService.ClientDetail[] getGroups() {
+    public AdminService.GroupDetail[] getGroups() {
         return adminService.getGroups();
     }
     
     @GetMapping(path = "groups/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public AdminService.ClientDetail getGroup(String id) {
-        AdminService.ClientDetail group = adminService.getGroup(id);
+    public AdminService.GroupDetail getGroup(String id) {
+        AdminService.GroupDetail group = adminService.getGroup(id);
         if (group == null) {
             throw new HttpClientErrorException(HttpStatus.NOT_FOUND, "Group not found: ".concat(id));
         }
