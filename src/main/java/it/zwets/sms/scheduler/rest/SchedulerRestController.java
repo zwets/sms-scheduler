@@ -22,9 +22,9 @@ import it.zwets.sms.scheduler.SmsSchedulerService;
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
 
 @RestController
-public class SmsSchedulerRestController {
+public class SchedulerRestController {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerRestController.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SchedulerRestController.class);
 
     @Autowired
     private SmsSchedulerService theService;

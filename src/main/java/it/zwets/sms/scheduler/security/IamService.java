@@ -1,41 +1,42 @@
-package it.zwets.sms.scheduler.admin;
+package it.zwets.sms.scheduler.security;
 
 import java.io.Serializable;
 import java.util.Arrays;
 
-import org.flowable.engine.IdentityService;
 import org.flowable.idm.api.Group;
+import org.flowable.idm.api.IdmIdentityService;
+import org.flowable.idm.api.Privilege;
 import org.flowable.idm.api.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Manages accounts and groups.
+ * Manages accounts, groups and privileges.
  *
  * The way this is built on top of the Flowable IDM component is:
  * <ul>
  * <li>an Account is an id with a name, email and password</li>
- * <li>an Account can be in zero or more Roles (groups) and in zero
+ * <li>an Account can be in zero or more Roles (groups)</li> and in zero
  *   or more Clients (groups).</li>
  * <li>Roles and Clients are just two different types of groups.
  *   Roles (users, admins) determine what an account can do; clients
  *   determine for which client (e.g. consort, mint) an account can 
  *   operate.</li>
  * </ul>
+ * 
  * Out of the box we have:
  * <ul>
  * <li>Two role groups: users and admins.  Their groupIds are given by
  *   <code>{@link USERS_ROLE}</code> and <code>{@link ADMINS_ROLE}</code></li>
  * <li>One client group: test, whose groupId is given by 
  *   <code>{@link TEST_CLIENT}</code></li>
- * <li>One admin account: admin, whose accountId and password are specified
- *   by the properties given by <code>{@link INITIAL_USER_PROPERTY}</code>
- *   and <code>{@link INITIAL_PASSWORD_PROPERTY}</code>.</li>
+ * <li>One admin account: whose accountId and password are given
+ *   by <code>{@link DEFAULT_USER}</code>
+ *   and <code>{@link DEFAULT_PASSWORD}</code>.</li>
  * </ul>
+ * 
  * The out-of-box admin account is a member of all groups (roles and clients).
  * You should <b>remove it once you have used it to create an admin account
  * for yourself.</b> It will not be recreated unless you remove all accounts.
@@ -46,9 +47,9 @@ import org.springframework.stereotype.Component;
  * @param clientId
  */
 @Component
-public class AdminService {
+public class IamService {
     
-    private static final Logger LOG = LoggerFactory.getLogger(AdminService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(IamService.class);
     
     /** Name of the built-in <code>USERS</code> group. */
     public static final String USERS_ROLE = "users";
@@ -59,44 +60,41 @@ public class AdminService {
     /** Name of the built-in <code>TEST</code> client (group). */
     public static final String TEST_CLIENT = "test";
 
+    /** Out-of-box admin account ID */
+    public static final String DEFAULT_USER = "admin";
+    
+    /** Out-of-box admin account password */
+    public static final String DEFAULT_PASSWORD = "test";
+        
     private static final String ROLE_TYPE = "role"; 
     private static final String CLIENT_TYPE = "client";
 
-    @Value("${sms.scheduler.admin.user")
-    private String initialUser;
-    
-    @Value("${sms.scheduler.admin.password")
-    private String initialPassword;
-    
-    private IdentityService identityService;
+    @Autowired
+    private IdmIdentityService identityService;
    
-    public AdminService(IdentityService identityService) {
+    public IamService(IdmIdentityService identityService) {
         this.identityService = identityService;
         
         if (identityService.createUserQuery().count() == 0) {
             LOG.debug("no accounts found in database, doing out-of-box setup");
-          
-            if (initialUser != null && initialPassword != null && !initialPassword.isBlank()) {
-                LOG.info("create the out-of-box accounts and groups", initialUser);
-                
-                createRole(USERS_ROLE, "Users");
-                createRole(ADMINS_ROLE, "Administrators");
-                createClient(TEST_CLIENT, "Test Client");
+            
+            LOG.info("create the out-of-box accounts and groups", DEFAULT_USER);
+            
+            createRole(USERS_ROLE, "Users");
+            createRole(ADMINS_ROLE, "Administrators");
+            createClient(TEST_CLIENT, "Test Client");
 
-                LOG.info("create the out-of-box admin account {} with password {}", initialUser, initialPassword);
-                createAccount(new AccountDetail(
-                        initialUser,
-                        "Default Admin User",
-                        "nobody@example.com",
-                        new String[]{ USERS_ROLE, ADMINS_ROLE, TEST_CLIENT }),
-                        initialPassword);
-                
-                LOG.warn("**IMPORTANT** remove the out-of-box {} account once you have"
-                        + " used it set up an admin account for yourself", initialUser);
-            }
-            else {
-                LOG.warn("no out-of-box accounts set up, no sms.scheduler.admin.* properties");
-            }
+            LOG.info("create the out-of-box admin account {} with password {}", 
+                    DEFAULT_USER, DEFAULT_PASSWORD);
+            createAccount(new AccountDetail(
+                    DEFAULT_USER,
+                    "Default Admin User",
+                    "nobody@example.com",
+                    new String[]{ USERS_ROLE, ADMINS_ROLE, TEST_CLIENT }),
+                    DEFAULT_PASSWORD);
+            
+            LOG.warn("**IMPORTANT** remove the out-of-box {} account once you have"
+                    + " used it set up an admin account for yourself", DEFAULT_USER);
         }
         else {
             LOG.debug("user accounts already present, skipping the out-of-box account setup");
@@ -174,10 +172,10 @@ public class AdminService {
             account = new AccountDetail(user.getId(), user.getDisplayName(), user.getEmail(), null);
             
             LOG.debug("retrieve groups for account: {}", id);
-            account.groups = (String[]) identityService.createGroupQuery()
+            account.groups = identityService.createGroupQuery()
                 .groupMember(id).list().stream()
                 .map(g -> g.getId())
-                .toArray();
+                .toArray(String[]::new);
         }
         
         return account;
@@ -191,10 +189,10 @@ public class AdminService {
     public AccountDetail[] getAccounts() {
         LOG.debug("retrieve all accounts");
         
-        return (AccountDetail[]) identityService.createUserQuery()
+        return identityService.createUserQuery()
                 .orderByUserId().asc().list().stream()
                 .map(u -> new AccountDetail(u.getId(), u.getDisplayName(), u.getEmail(), null))
-                .toArray();
+                .toArray(AccountDetail[]::new);
     }
 
     /**
@@ -205,11 +203,11 @@ public class AdminService {
     public AccountDetail[] getAccountsInGroup(String groupId) {
         LOG.debug("retrieve accounts in group: {}", groupId);
         
-        return (AccountDetail[]) identityService.createUserQuery()
+        return identityService.createUserQuery()
                 .memberOfGroup(groupId)
                 .orderByUserId().asc().list().stream()
                 .map(u -> new AccountDetail(u.getId(), u.getDisplayName(), u.getEmail(), null))
-                .toArray();
+                .toArray(AccountDetail[]::new);
     }
 
     /**
@@ -251,11 +249,22 @@ public class AdminService {
     }
     
     /**
+     * Check password for acount id
+     * @param id
+     * @param password
+     * @return true iff the password is correct
+     */
+    public boolean checkPassword(String id, String password) {
+        LOG.debug("check password for account: {}", id);
+        return identityService.checkPassword(id, password);
+    }
+    
+    /**
      * Change password for id
      * @param accountId
      * @param password
      */
-    public void updateAccountPassword(String id, String password) {
+    public void updatePassword(String id, String password) {
         LOG.debug("update password for account: {}", id);
         User user = identityService.createUserQuery().userId(id).singleResult();
         if (user != null) {
@@ -276,7 +285,12 @@ public class AdminService {
      */
     public GroupDetail createRole(String groupId, String name) {
         LOG.info("creating role group: {}", groupId);
-        return createGroup(groupId, name, ROLE_TYPE);
+        GroupDetail result = createGroup(groupId, name, ROLE_TYPE);
+        String privilegeName = "ROLE_" + groupId;
+        Privilege privilege = identityService.createPrivilege(privilegeName);
+        LOG.info("PRIVILEGE({},{})", privilege.getId(), privilege.getName());
+        identityService.addGroupPrivilegeMapping(privilege.getId(), groupId);
+        return result;
     }
     
     /**
@@ -366,10 +380,10 @@ public class AdminService {
             group = new GroupDetail(flwGroup.getId(), flwGroup.getName(), flwGroup.getType(), null);
 
             LOG.debug("retrieve accounts for group: {}", id);
-            group.accounts = (String[]) identityService.createUserQuery()
+            group.accounts = identityService.createUserQuery()
                 .memberOfGroup(id).list().stream()
                 .map(u -> u.getId())
-                .toArray();
+                .toArray(String[]::new);
         }
         
         return group;    
@@ -381,11 +395,11 @@ public class AdminService {
      */
     public GroupDetail[] getRoles() {
         LOG.debug("retrieve all roles");
-        return (GroupDetail[]) identityService.createGroupQuery()
+        return identityService.createGroupQuery()
                 .groupType(ROLE_TYPE)
                 .orderByGroupId().asc().list().stream()
                 .map(g -> new GroupDetail(g.getId(), g.getName(), g.getType(), null))
-                .toArray();
+                .toArray(GroupDetail[]::new);
     }
 
     /**
@@ -394,11 +408,11 @@ public class AdminService {
      */
     public GroupDetail[] getClients() {
         LOG.debug("retrieve all clients");
-        return (GroupDetail[]) identityService.createGroupQuery()
+        return identityService.createGroupQuery()
                 .groupType(CLIENT_TYPE)
                 .orderByGroupId().asc().list().stream()
                 .map(g -> new GroupDetail(g.getId(), g.getName(), g.getType(), null))
-                .toArray();
+                .toArray(GroupDetail[]::new);
     }
 
     /**
@@ -407,17 +421,17 @@ public class AdminService {
      */
     public GroupDetail[] getGroups() {
         LOG.debug("retrieve all groups");
-        return (GroupDetail[]) identityService.createGroupQuery()
+        return identityService.createGroupQuery()
                 .orderByGroupId().asc().list().stream()
                 .map(g -> new GroupDetail(g.getId(), g.getName(), g.getType(), null))
-                .toArray();
+                .toArray(GroupDetail[]::new);
     }
 
     /**
      * DTO to carry account information to and from service.
      * @author zwets
      */
-    public static class AccountDetail implements Serializable {
+    public final class AccountDetail implements Serializable {
         private static final long serialVersionUID = 1L;
         private String id;
         private String name;
@@ -459,7 +473,7 @@ public class AdminService {
      * DTO to carry Group information to and from service.
      * @author zwets
      */
-    public static class GroupDetail implements Serializable {
+    public final class GroupDetail implements Serializable {
         private static final long serialVersionUID = 1L;
         private String id;
         private String name;

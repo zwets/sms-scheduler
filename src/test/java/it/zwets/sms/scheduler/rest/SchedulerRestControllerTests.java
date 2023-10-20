@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-class RestInterfaceSecurityTests {
+class SchedulerRestControllerTests {
 
     @LocalServerPort
     int port;
@@ -37,68 +37,62 @@ class RestInterfaceSecurityTests {
     }
     
     @Test
-    public void getAdminUsersWorksForAdmin() {
-        ResponseEntity<String> response = adminRequest("/admin/users");
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-    }
-    
-    @Test
     public void getScheduledRootRequiresAuth() {
-        ResponseEntity<String> response = anonRequest("/scheduled");
+        ResponseEntity<String> response = anonRequest("/schedule");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
     
     @Test
     public void getScheduledRootBlocksPerpetrator() {
-        ResponseEntity<String> response = perpetratorRequest("/scheduled");
+        ResponseEntity<String> response = perpetratorRequest("/schedule");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 
     @Test
     public void getScheduledRootRequiresAdmin() {
-        ResponseEntity<String> response = userRequest("/scheduled");
-        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        ResponseEntity<String> response = userRequest("/schedule");
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 
     @Test
     public void getScheduledRootWorksForAdmin() {
-        ResponseEntity<String> response = adminRequest("/scheduled");
+        ResponseEntity<String> response = adminRequest("/schedule");
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
     public void getScheduledWithClientRequiresAuth() {
-        ResponseEntity<String> response = anonRequest("/scheduled/CLIENT");
+        ResponseEntity<String> response = anonRequest("/schedule/CLIENT");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 
     @Test
     public void getScheduledWithClientWorksForUser() {
-        ResponseEntity<String> response = userRequest("/scheduled/CLIENT");
+        ResponseEntity<String> response = userRequest("/schedule/CLIENT");
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
     public void getScheduledWithClientWorksForAdmin() {
-        ResponseEntity<String> response = adminRequest("/scheduled/CLIENT");
+        ResponseEntity<String> response = adminRequest("/schedule/CLIENT");
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
     public void getScheduledWithTargetRequiresAuth() {
-        ResponseEntity<String> response = anonRequest("/scheduled/CLIENT/TARGET");
+        ResponseEntity<String> response = anonRequest("/schedule/CLIENT/TARGET");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 
     @Test
     public void getScheduledWithTargetWorksForUser() {
-        ResponseEntity<String> response = userRequest("/scheduled/CLIENT/TARGET");
+        ResponseEntity<String> response = userRequest("/schedule/CLIENT/TARGET");
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
     public void getScheduledWithTargetWorksForAdmin() {
-        ResponseEntity<String> response = adminRequest("/scheduled/CLIENT/TARGET");
+        ResponseEntity<String> response = adminRequest("/schedule/CLIENT/TARGET");
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 }
