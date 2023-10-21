@@ -1,6 +1,5 @@
 package it.zwets.sms.scheduler.security;
 
-import java.io.Serializable;
 import java.util.Arrays;
 
 import org.flowable.idm.api.Group;
@@ -15,82 +14,82 @@ import org.springframework.stereotype.Component;
 /**
  * IAM - identity and access management service.
  * 
- * This service manages accounts, groups, roles and authorities.
- * It is built on top of the Flowable IDM component, which ties in with
- * Spring Security.
+ * This service manages accounts, groups, roles and authorities.  It is
+ * built on top of the Flowable IDM component, which ties in with Spring
+ * Security.
  * 
- * Things can get a complicated due to different terminology, but here
- * is the summary.
+ * <h1>Terminology</h1>
  * 
  * <ul>
  * <li>Flowable IDM has accounts, groups, and privileges.  An account can
  *   be in any number of groups.  Priviliges can be attached to accounts
  *   and to groups.  Privileges translate into granted authorities.</li>
- * <li>Authorities are what Spring uses; they sit on the Authentication
- *   bean attached to the logged-in user, and can be used in the filter
- *   chain for web requests.  Spring also has roles, but these are just
- *   those authorities that start with "ROLE_", without the "ROLE_".</li> *  
- * <li>Similarly, we have two aspects for authorisation: roles like USER
- *   and ADMIN, but also "authority" to operate for a specific client.
- *   We could go deeper: account A may be authorized to to schedule SMS
- *   for client C, whereas account B can only see delivery statuses.</li>
+ * <li>Authorities bridge to Spring uses; they sit on the Authentication
+ *   context when there is a logged-in user, and can be used in the filter
+ *   chain for web requests.  Spring roles are just authorities with prefix
+ *   "ROLE_", and can be conveniently tested with <code>hasRole()</code>.
+ *   I.e. <code>hasRole("Q")</code> == <code>hasAuthority("ROLE_Q")</code>.
+ * <li>In our SMS Service we similarly have two aspects for authorisation:
+ *   user accounts have roles (USER, ADMIN) and "authorities" to act on
+ *   behalf of specific tenants/clients (TEST, CONSORT, MINT).</li>
+ * <li>We could go deeper (e.g. account A is authorized to schedule SMS
+ *   for client C whereas B is authorized to see delivery status only),
+ *   but in the interest of simplicity we stop at "unary predicates".</li>
  * </ul>
  * 
- * To keep things simple, we stick to the following:
+ * <h1>Design Decisions</h1>
+ * 
  * <ul>
- * <li>We assign priviliges only to groups, not to individual accounts.</li>
- * <li>We assign exactly one privilege to each group, and this maps to
- *   either a ROLE or a CLIENT authority.</li>
- * <li>We do not use nested groups, nor hierarchical roles.</li>
- * <li>The above means that every account needs to be explicitly assigned
- *   to the role and client authorities (= groups) that it needs.</li>
- * <li>Notably, having the ADMINS role does not imply authority over any
- *   client operations, whether send, cancel, or see reports.  (Clearly
- *   though, an ADMIN could always assign themselves to a group that would
- *   allow this.</li>
+ * <li>We use no nested groups or role hierarchy, just a flat model with
+ *   accounts that can be in zero or more groups.</li>
+ * <li>Each group corresponds to exactly one authority (through the single
+ *   unique privilege it confers).</li>
+ * <li>We thus have a <code>1:N</code> relation of <code>account</code> to
+ *   <code>group = privilege = authority</code>, and each account must be
+ *   explicitly added to each group whose authorities it needs.</li>
+ * <li>Authorities come in two flavours: ROLE and CLIENT.  All this means
+ *   is that (in the absence of role hierarchy) <code>hasRole("X")</code>
+ *   can be used as shorthand for <code>hasAuthority("ROLE_X")</code>.</li>
  * </ul>
  * 
- * Out of the box setup:
+ * <h1>Out of the box setup</h1>
+ * 
  * <ul>
- * <li>Two ROLE groups: users and admins.  Their groupIds are given by
- *   <code>{@link USERS_ROLE}</code> and <code>{@link ADMINS_ROLE}</code></li>
- * <li>One CLIENT group: "test", whose groupId is given by 
- *   <code>{@link TEST_CLIENT}</code></li>
- * <li>One admin account (by necessity, else how to create more accounts?)
- *   whose accountId and password are given by <code>{@link DEFAULT_USER}</code>
- *   and <code>{@link DEFAULT_PASSWORD}</code>.</li>
+ * <li>Two ROLE authorities: ROLE_USER and ROLE_ADMIN, conferred by groups
+ *   "users" and "admins" respectively.</li>
+ * <li>One CLIENT authority: CLIENT_TEST, conferred by group "test".</li>
+ * <li>One account "admin" with password "test" which is a member of both
+ *   roles and the test client.</li>
  * </ul>
  * 
- * The out-of-box admin account is a member of all role and client groups,
- * which makes testing easy.  However, remember to <b>remove it once you have
- * used it to create an admin account for yourself.</b>
+ * The out-of-box admin account is there so you can create an admin account
+ * for yourself.  Remember to <b>remove it</b> right after that.
  * 
- * The out-of-box admin account will not be recreated unless you remove all
- * accounts. TODO: prevent removal of final admin account.
+ * <h1>Implementation Details</h1>
+ * 
+ * We use the <code>Group.groupType</code> field to store the authority
+ * flavour ("ROLE", "CLIENT"), which also doubles a the authority prefix.
+ * So, for a new group/authority, we collect the group ID (e.g. "admins"),
+ * flavour ("ROLE"), and authority name ("ADMIN").
+ * 
+ * We then create a <code>Group</code> with <code>id = "admins"</code> and
+ * <code>type = "ROLE"</code>, and map it to a privilege with 
+ * <code>name = group.type + "_" + "ADMIN"</code>.
  */
 @Component
 public class IamService {
     
     private static final Logger LOG = LoggerFactory.getLogger(IamService.class);
     
-    /** Name of the built-in <code>USERS</code> group. */
-    public static final String USERS_ROLE = "users";
+    public static final String USERS_GROUP = "users";
+    public static final String ADMINS_GROUP = "admins";
+    public static final String TEST_GROUP = "test";
     
-    /** Name of the built-in <code>ADMINS</code> group. */
-    public static final String ADMINS_ROLE = "admins";
+    public static final String INITIAL_ADMIN = "admin";
+    public static final String INITIAL_PASSWORD = "test";
 
-    /** Name of the built-in <code>TEST</code> client (group). */
-    public static final String TEST_CLIENT = "test";
-
-    /** Out-of-box admin account ID */
-    public static final String DEFAULT_USER = "admin";
+    public enum Flavour { ROLE, CLIENT };
     
-    /** Out-of-box admin account password */
-    public static final String DEFAULT_PASSWORD = "test";
-        
-    private static final String ROLE_TYPE = "ROLE";
-    private static final String CLIENT_TYPE = "CLIENT";
-
     @Autowired
     private IdmIdentityService identityService;
    
@@ -100,26 +99,26 @@ public class IamService {
         if (identityService.createUserQuery().count() == 0) {
             LOG.debug("no accounts found in database, doing out-of-box setup");
             
-            LOG.info("create the out-of-box accounts and groups", DEFAULT_USER);
+            LOG.info("create the out-of-box accounts and groups");
             
-            createRole(USERS_ROLE, "Users");
-            createRole(ADMINS_ROLE, "Administrators");
-            createClient(TEST_CLIENT, "Test Client");
+            createRole(USERS_GROUP, "USER");
+            createRole(ADMINS_GROUP, "ADMIN");
+            createClient(TEST_GROUP, "TEST");
 
-            LOG.info("create the out-of-box admin account {} with password {}", 
-                    DEFAULT_USER, DEFAULT_PASSWORD);
+            LOG.info("create the out-of-box admin account {} with password {}", INITIAL_ADMIN, INITIAL_PASSWORD);
+            
             createAccount(new AccountDetail(
-                    DEFAULT_USER,
+                    INITIAL_ADMIN,
                     "Default Admin User",
                     "nobody@example.com",
-                    new String[]{ USERS_ROLE, ADMINS_ROLE, TEST_CLIENT }),
-                    DEFAULT_PASSWORD);
+                    new String[]{ USERS_GROUP, ADMINS_GROUP, TEST_GROUP }),
+                    INITIAL_PASSWORD);
             
             LOG.warn("**IMPORTANT** remove the out-of-box {} account once you have"
-                    + " used it set up an admin account for yourself", DEFAULT_USER);
+                    + " used it set up an admin account for yourself", INITIAL_ADMIN);
         }
         else {
-            LOG.debug("user accounts already present, skipping the out-of-box account setup");
+            LOG.debug("user accounts already present, skipping out-of-box account setup");
         }
     }
  
@@ -191,13 +190,13 @@ public class IamService {
         User user = identityService.createUserQuery().userId(id).singleResult();
         if (user != null) {
        
-            account = new AccountDetail(user.getId(), user.getDisplayName(), user.getEmail(), null);
-            
             LOG.debug("retrieve groups for account: {}", id);
-            account.groups = identityService.createGroupQuery()
+            String groups[] = identityService.createGroupQuery()
                 .groupMember(id).list().stream()
                 .map(g -> g.getId())
                 .toArray(String[]::new);
+            
+            account = new AccountDetail(user.getId(), user.getDisplayName(), user.getEmail(), groups);
         }
         
         return account;
@@ -302,59 +301,70 @@ public class IamService {
     /**
      * Create a role group. No effect if already exists.
      * @param groupId
-     * @param name
-     * @return the role details with the account list in it
+     * @param roleName
+     * @return the group details with the account list in it
      */
-    public GroupDetail createRole(String groupId, String name) {
-        LOG.info("creating role group: {}", groupId);
-        GroupDetail result = createGroup(groupId, name, ROLE_TYPE);
-        String privilegeName = "ROLE_" + groupId;
-        Privilege privilege = identityService.createPrivilege(privilegeName);
-        LOG.info("PRIVILEGE({},{})", privilege.getId(), privilege.getName());
-        identityService.addGroupPrivilegeMapping(privilege.getId(), groupId);
-        return result;
+    public GroupDetail createRole(String groupId, String roleName) {
+        LOG.info("creating role group: {} for role {}", groupId, roleName);
+        return createGroup(groupId, Flavour.ROLE, roleName);
     }
     
     /**
      * Create a client group. No effect if already exists.
      * @param groupId
-     * @param name
-     * @return the client details with the account list in it
+     * @param clientName
+     * @return the group details with the account list in it
      */
-    public GroupDetail createClient(String groupId, String name) {
-        LOG.info("creating client group: {}", groupId);
-        return createGroup(groupId, name, CLIENT_TYPE);        
+    public GroupDetail createClient(String groupId, String clientName) {
+        LOG.info("creating client group: {} for client {}", groupId, clientName);
+        return createGroup(groupId, Flavour.CLIENT, clientName);        
     }
     
     /**
      * Create a new group or return existing group.
-     * @param clientId
-     * @param name
-     * @param type
+     * @param groupId name of the group
+     * @param flavour the authority flavour (role, client)
+     * @param authName the authority name (e.g. for group "users" use "USER")
      * @return the GroupDetail, with group list
      */
-    protected GroupDetail createGroup(String groupId, String name, String type) {
-        LOG.debug("creating group: {}", groupId);        
+    protected GroupDetail createGroup(String groupId, Flavour flavour, String authName) {
+        LOG.debug("creating group {} with authority {}_{}", groupId, flavour, authName);        
 
         GroupDetail group = getGroup(groupId, null);
         
         if (group == null) {
+            
             Group flwGroup = identityService.newGroup(groupId);
             flwGroup.setId(groupId);
-            flwGroup.setName(name);
-            flwGroup.setType(type);
+            flwGroup.setName(authName);
+            flwGroup.setType(flavour.toString());
             identityService.saveGroup(flwGroup);
             
-            group = new GroupDetail(groupId, name, type, new String[0]);
+            group = new GroupDetail(groupId, flavour.toString(), authName, new String[0]);
+            
+	        String privName = "%s_%s".formatted(flavour, authName);
+	        Privilege priv = identityService.createPrivilege(privName);
+	        
+	        LOG.debug("assigning privilege {} to group {}", privName);        
+	        identityService.addGroupPrivilegeMapping(priv.getId(), groupId);
         }
-        else if (group.getType() != type) {
+        else if (!(group.type.equals(flavour.toString()))) {
             throw new RuntimeException("cannot create %s group %s: %s group with that ID exists"
-                    .formatted(type, groupId, group.getType()));
+                    .formatted(flavour, groupId, group.type));
         }
         
         return group;
     }
 
+    /**
+     * Delete the group with groupId.  No-op if group does not exist.
+     * @param groupId
+     */
+    public void deleteGroup(String groupId) {
+        LOG.debug("delete group {}", groupId);
+        identityService.deleteGroup(groupId);
+    }
+    
     /**
      * Retrieve details of role as well as its account id list, or null if not found
      * @param id
@@ -362,7 +372,7 @@ public class IamService {
      */
     public GroupDetail getRole(String id) {
         LOG.debug("retrieve role details for id: {}", id);
-        return getGroup(id, ROLE_TYPE);
+        return getGroup(id, Flavour.ROLE);
     }
 
     /**
@@ -372,7 +382,7 @@ public class IamService {
      */
     public GroupDetail getClient(String id) {
         LOG.debug("retrieve client details for id: {}", id);
-        return getGroup(id, CLIENT_TYPE);
+        return getGroup(id, Flavour.CLIENT);
     }
 
     /**
@@ -388,24 +398,24 @@ public class IamService {
     /**
      * Retrieve group with id and optional type, including member account ids, or null if not found.
      * @param id the role or client ID
-     * @param type the group type to filter on or null to return any type
+     * @param flavour the group type to filter on or null to return any type
      * @return the group details
      */
-    protected GroupDetail getGroup(String id, String type) {
-        LOG.debug("retrieve group: {}", id);
+    protected GroupDetail getGroup(String id, Flavour flavour) {
+        LOG.debug("retrieve {} group: {}", flavour == null ? "any" : flavour, id);
        
         GroupDetail group = null;
         
         Group flwGroup = identityService.createGroupQuery().groupId(id).singleResult();
-        if (flwGroup != null && (type == null || type == flwGroup.getType())) {
+        if (flwGroup != null && (flavour == null || flavour.toString().equals(flwGroup.getType()))) {
             
-            group = new GroupDetail(flwGroup.getId(), flwGroup.getName(), flwGroup.getType(), null);
-
             LOG.debug("retrieve accounts for group: {}", id);
-            group.accounts = identityService.createUserQuery()
+            String accounts[] = identityService.createUserQuery()
                 .memberOfGroup(id).list().stream()
                 .map(u -> u.getId())
                 .toArray(String[]::new);
+            
+            group = new GroupDetail(flwGroup.getId(), flwGroup.getType(), flwGroup.getName(), accounts);
         }
         
         return group;    
@@ -418,9 +428,9 @@ public class IamService {
     public GroupDetail[] getRoles() {
         LOG.debug("retrieve all roles");
         return identityService.createGroupQuery()
-                .groupType(ROLE_TYPE)
+                .groupType(Flavour.ROLE.toString())
                 .orderByGroupId().asc().list().stream()
-                .map(g -> new GroupDetail(g.getId(), g.getName(), g.getType(), null))
+                .map(g -> new GroupDetail(g.getId(), g.getType(), g.getName(), null))
                 .toArray(GroupDetail[]::new);
     }
 
@@ -431,9 +441,9 @@ public class IamService {
     public GroupDetail[] getClients() {
         LOG.debug("retrieve all clients");
         return identityService.createGroupQuery()
-                .groupType(CLIENT_TYPE)
+                .groupType(Flavour.CLIENT.toString())
                 .orderByGroupId().asc().list().stream()
-                .map(g -> new GroupDetail(g.getId(), g.getName(), g.getType(), null))
+                .map(g -> new GroupDetail(g.getId(), g.getType(), g.getName(), null))
                 .toArray(GroupDetail[]::new);
     }
 
@@ -445,91 +455,23 @@ public class IamService {
         LOG.debug("retrieve all groups");
         return identityService.createGroupQuery()
                 .orderByGroupId().asc().list().stream()
-                .map(g -> new GroupDetail(g.getId(), g.getName(), g.getType(), null))
+                .map(g -> new GroupDetail(g.getId(), g.getType(), g.getName(), null))
                 .toArray(GroupDetail[]::new);
     }
 
-    /**
-     * DTO to carry account information to and from service.
-     * @author zwets
-     */
-    public final class AccountDetail implements Serializable {
-        private static final long serialVersionUID = 1L;
-        private String id;
-        private String name;
-        private String email;
-        private String[] groups;
-        public AccountDetail(String id, String name, String email, String[] groups) {
-            this.id = id;
-            this.name = name;
-            this.email = email;
-            this.groups = groups;
-        }
-        public String getId() {
-            return id;
-        }
-        public void setId(String id) {
-            this.id = id;
-        }
-        public String getName() {
-            return name;
-        }
-        public void setName(String name) {
-            this.name = name;
-        }
-        public String getEmail() {
-            return email;
-        }
-        public void setEmail(String email) {
-            this.email = email;
-        }
-        public String[] getGroups() {
-            return groups;
-        }
-        public void setGroups(String[] groups) {
-            this.groups = groups;
-        }
+    /** DTO to carry account information to and from service. */
+    public final record AccountDetail(
+        String id,
+        String name,
+        String email,
+        String[] groups) {
     }
 
-    /**
-     * DTO to carry Group information to and from service.
-     * @author zwets
-     */
-    public final class GroupDetail implements Serializable {
-        private static final long serialVersionUID = 1L;
-        private String id;
-        private String name;
-        private String type;
-        private String[] accounts;
-        public GroupDetail(String id, String name, String type, String[] accounts) {
-            this.id = id;
-            this.name = name;
-            this.type = type;
-            this.accounts = null;
-        }
-        public String getId() {
-            return id;
-        }
-        public void setId(String id) {
-            this.id = id;
-        }
-        public String getName() {
-            return name;
-        }
-        public void setName(String name) {
-            this.name = name;
-        }
-        public String getType() {
-            return type;
-        }
-        public void setType(String type) {
-            this.name = type;
-        }
-        public String[] getAccounts() {
-            return accounts;
-        }
-        public void setAccounts(String[] accounts) {
-            this.accounts = accounts;
-        }
+    /** DTO to carry group information to and from service. */
+    public final record GroupDetail(
+        String id,
+        String type,
+        String name,
+        String[] acounts) {
     }
 }
