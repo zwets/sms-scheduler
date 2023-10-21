@@ -13,38 +13,60 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Manages accounts, groups and privileges.
- *
- * The way this is built on top of the Flowable IDM component is:
+ * IAM - identity and access management service.
+ * 
+ * This service manages accounts, groups, roles and authorities.
+ * It is built on top of the Flowable IDM component, which ties in with
+ * Spring Security.
+ * 
+ * Things can get a complicated due to different terminology, but here
+ * is the summary.
+ * 
  * <ul>
- * <li>an Account is an id with a name, email and password</li>
- * <li>an Account can be in zero or more Roles (groups)</li> and in zero
- *   or more Clients (groups).</li>
- * <li>Roles and Clients are just two different types of groups.
- *   Roles (users, admins) determine what an account can do; clients
- *   determine for which client (e.g. consort, mint) an account can 
- *   operate.</li>
+ * <li>Flowable IDM has accounts, groups, and privileges.  An account can
+ *   be in any number of groups.  Priviliges can be attached to accounts
+ *   and to groups.  Privileges translate into granted authorities.</li>
+ * <li>Authorities are what Spring uses; they sit on the Authentication
+ *   bean attached to the logged-in user, and can be used in the filter
+ *   chain for web requests.  Spring also has roles, but these are just
+ *   those authorities that start with "ROLE_", without the "ROLE_".</li> *  
+ * <li>Similarly, we have two aspects for authorisation: roles like USER
+ *   and ADMIN, but also "authority" to operate for a specific client.
+ *   We could go deeper: account A may be authorized to to schedule SMS
+ *   for client C, whereas account B can only see delivery statuses.</li>
  * </ul>
  * 
- * Out of the box we have:
+ * To keep things simple, we stick to the following:
  * <ul>
- * <li>Two role groups: users and admins.  Their groupIds are given by
+ * <li>We assign priviliges only to groups, not to individual accounts.</li>
+ * <li>We assign exactly one privilege to each group, and this maps to
+ *   either a ROLE or a CLIENT authority.</li>
+ * <li>We do not use nested groups, nor hierarchical roles.</li>
+ * <li>The above means that every account needs to be explicitly assigned
+ *   to the role and client authorities (= groups) that it needs.</li>
+ * <li>Notably, having the ADMINS role does not imply authority over any
+ *   client operations, whether send, cancel, or see reports.  (Clearly
+ *   though, an ADMIN could always assign themselves to a group that would
+ *   allow this.</li>
+ * </ul>
+ * 
+ * Out of the box setup:
+ * <ul>
+ * <li>Two ROLE groups: users and admins.  Their groupIds are given by
  *   <code>{@link USERS_ROLE}</code> and <code>{@link ADMINS_ROLE}</code></li>
- * <li>One client group: test, whose groupId is given by 
+ * <li>One CLIENT group: "test", whose groupId is given by 
  *   <code>{@link TEST_CLIENT}</code></li>
- * <li>One admin account: whose accountId and password are given
- *   by <code>{@link DEFAULT_USER}</code>
+ * <li>One admin account (by necessity, else how to create more accounts?)
+ *   whose accountId and password are given by <code>{@link DEFAULT_USER}</code>
  *   and <code>{@link DEFAULT_PASSWORD}</code>.</li>
  * </ul>
  * 
- * The out-of-box admin account is a member of all groups (roles and clients).
- * You should <b>remove it once you have used it to create an admin account
- * for yourself.</b> It will not be recreated unless you remove all accounts.
- * If you do not want it to be created at all, comment out the 
- * <code>sms.scheduler.admin.*</code> properties.
+ * The out-of-box admin account is a member of all role and client groups,
+ * which makes testing easy.  However, remember to <b>remove it once you have
+ * used it to create an admin account for yourself.</b>
  * 
- * @param id
- * @param clientId
+ * The out-of-box admin account will not be recreated unless you remove all
+ * accounts. TODO: prevent removal of final admin account.
  */
 @Component
 public class IamService {
@@ -66,8 +88,8 @@ public class IamService {
     /** Out-of-box admin account password */
     public static final String DEFAULT_PASSWORD = "test";
         
-    private static final String ROLE_TYPE = "role"; 
-    private static final String CLIENT_TYPE = "client";
+    private static final String ROLE_TYPE = "ROLE";
+    private static final String CLIENT_TYPE = "CLIENT";
 
     @Autowired
     private IdmIdentityService identityService;
