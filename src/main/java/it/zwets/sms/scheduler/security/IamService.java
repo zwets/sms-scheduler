@@ -76,6 +76,7 @@ import org.springframework.stereotype.Component;
  * <code>type = "ROLE"</code>, and map it to a privilege with 
  * <code>name = group.type + "_" + "ADMIN"</code>.
  */
+
 @Component
 public class IamService {
     

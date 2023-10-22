@@ -65,7 +65,7 @@ class IamServiceTests {
     
     @Test
     void testCreateAccountNoGroups() {
-        final String id = "new-id";
+        final String id = "newid1";
         final String password = "my-new-password";
         
         AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", null);
@@ -84,7 +84,7 @@ class IamServiceTests {
 
     @Test
     void testCreateAccountInAdmins() {
-        final String id = "new-id";
+        final String id = "newid2";
         final String password = "my-new-password";
         final String groups[] = { IamService.ADMINS_GROUP };
         
@@ -102,23 +102,24 @@ class IamServiceTests {
     }
   
     @Test
-    void testCreateAccountWithNullPassword() {
-        final String id = "new-id";
+    void testCreateAccountWithEmptyPassword() {
+        final String id = "newid4";
         
         AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", null);
-        svc.createAccount(account, null);
+        svc.createAccount(account, "");
         
         AccountDetail found = svc.getAccount(id);
         assertEquals(account.id(), found.id());
         assertEquals(account.name(), found.name());
         assertEquals(account.email(), found.email());
         assertEquals(0, found.groups().length);
-        assertTrue(svc.checkPassword(id, null));
+        assertTrue(svc.checkPassword(id, ""));
         
         svc.deleteAccount(id);
         assertNull(svc.getAccount(id));
     }
     
+ 
     @Test
     void adminUserInAdmins() {
         assertTrue(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.ADMINS_GROUP));
