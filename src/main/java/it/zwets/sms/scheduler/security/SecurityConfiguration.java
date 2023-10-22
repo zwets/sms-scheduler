@@ -21,9 +21,10 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http  
-        //  .authorizeHttpRequests omitted, see https://stackoverflow.com/a/77339695/2109137
             .sessionManagement(ses -> ses.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .csrf(csrf -> csrf.disable())  // gets in the way of and is unneeded for REST
+            .csrf(csrf -> csrf.disable())       // gets in the way of and is unneeded for REST
+            .authorizeHttpRequests(req -> req
+                .anyRequest().authenticated())  // see https://stackoverflow.com/a/77339695/2109137
             .httpBasic(bas -> bas.realmName("SMS Scheduler"));
 
         return http.build();
