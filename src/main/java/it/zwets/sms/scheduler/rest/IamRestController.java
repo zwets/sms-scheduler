@@ -58,11 +58,11 @@ public class IamRestController {
 
     @GetMapping(path = "accounts/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN') || authentication.name == #id")
-    public IamService.AccountDetail getAccount1(@PathVariable String id) {
+    public IamService.AccountDetail getAccount(@PathVariable String id) {
         LOG.debug("REST GET accounts/{}", id);
         IamService.AccountDetail account = IamService.getAccount(id);
         if (account == null) {
-            throw new ResponseStatusException(HttpStatus.OK, "Account not found: " + id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + id);
         }
         return account;
     }
@@ -78,7 +78,7 @@ public class IamRestController {
         LOG.debug("REST GET groups/{}", id);
         IamService.GroupDetail group = IamService.getGroup(id);
         if (group == null) {
-            throw new ResponseStatusException(HttpStatus.OK, "Group not found: " + id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found: " + id);
         }
         return group;
     }
@@ -94,7 +94,7 @@ public class IamRestController {
         LOG.debug("REST GET roles/{}", id);
         IamService.GroupDetail role = IamService.getClient(id);
         if (role == null) {
-            throw new ResponseStatusException(HttpStatus.OK, "Role not found: " + id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found: " + id);
         }
         return role;
     }
@@ -110,7 +110,7 @@ public class IamRestController {
         LOG.debug("REST GET clients/{}", id);
         IamService.GroupDetail client = IamService.getClient(id);
         if (client == null) {
-            throw new ResponseStatusException(HttpStatus.OK, "Client not found: " + id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Client not found: " + id);
         }
         return client;
     }
