@@ -1,4 +1,4 @@
-package it.zwets.sms.scheduler.security;
+package it.zwets.sms.scheduler.init;
 
 import org.flowable.idm.api.IdmIdentityService;
 import org.flowable.spring.security.FlowableUserDetailsService;

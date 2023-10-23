@@ -3,17 +3,17 @@
 export LC_ALL="C"
 set -euo pipefail
 
-create-dummy() {
-    ./create-account $1 $1 $1 $1 "$2"
+create_dummy() {
+    ACC="$1"
+    shift
+    ../admin/create-account -dv $ACC $ACC $ACC $ACC "$@"
 }
 
-./create-account nnn '[]'
-./create-account nnt '["test"]'
-./create-account nan '["admins"]'
-./create-account nat '["admins","test"]'
-./create-account unn '["users"]'
-./create-account unt '["users","test"]'
-./create-account uan '["users","admins"]'
-./create-account uat '["users","admins","test"]'
-
-
+create_dummy nnn
+create_dummy nnt test
+create_dummy nan admins
+create_dummy nat admins test
+create_dummy unn users
+create_dummy unt users test
+create_dummy uan users admins
+create_dummy uat users admins test

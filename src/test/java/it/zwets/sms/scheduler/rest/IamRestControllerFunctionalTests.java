@@ -30,7 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import it.zwets.sms.scheduler.security.IamService;
+import it.zwets.sms.scheduler.iam.IamService;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class IamRestControllerFunctionalTests {

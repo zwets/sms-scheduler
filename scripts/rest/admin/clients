@@ -1,0 +1,10 @@
+#!/bin/bash
+
+CONTEXT=/iam/clients
+USAGE="[ID]
+
+  Lists all clients or all accounts in client ID"
+
+. $(realpath $(dirname "$0")/../lib/common.sh)
+
+rest_GET ${1:+/$1}

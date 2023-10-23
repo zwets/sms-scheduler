@@ -1,4 +1,4 @@
-package it.zwets.sms.scheduler.security;
+package it.zwets.sms.scheduler.iam;
 
 import java.util.Arrays;
 
@@ -24,14 +24,14 @@ import org.springframework.stereotype.Component;
  * <li>Flowable IDM has accounts, groups, and privileges.  An account can
  *   be in any number of groups.  Priviliges can be attached to accounts
  *   and to groups.  Privileges translate into granted authorities.</li>
- * <li>Authorities bridge to Spring uses; they sit on the Authentication
+ * <li>Authorities bridge to Spring Boot; they sit on the Authentication
  *   context when there is a logged-in user, and can be used in the filter
  *   chain for web requests.  Spring roles are just authorities with prefix
  *   "ROLE_", and can be conveniently tested with <code>hasRole()</code>.
- *   I.e. <code>hasRole("Q")</code> == <code>hasAuthority("ROLE_Q")</code>.
+ *   I.e. <code>hasRole("Q") == hasAuthority("ROLE_Q")</code>.
  * <li>In our SMS Service we similarly have two aspects for authorisation:
- *   user accounts have roles (USER, ADMIN) and "authorities" to act on
- *   behalf of specific tenants/clients (TEST, CONSORT, MINT).</li>
+ *   user accounts have roles (user, admin) and "authorities" to act on
+ *   behalf of clients (test, consort, mint).</li>
  * <li>We could go deeper (e.g. account A is authorized to schedule SMS
  *   for client C whereas B is authorized to see delivery status only),
  *   but in the interest of simplicity we stop at "unary predicates".</li>
@@ -42,24 +42,24 @@ import org.springframework.stereotype.Component;
  * <ul>
  * <li>We use no nested groups or role hierarchy, just a flat model with
  *   accounts that can be in zero or more groups.</li>
- * <li>Each group corresponds to exactly one authority (through the single
- *   unique privilege it confers).</li>
+ * <li>Each group corresponds to exactly one authority, through the single
+ *   unique privilege it confers.</li>
  * <li>We thus have a <code>1:N</code> relation of <code>account</code> to
  *   <code>group = privilege = authority</code>, and each account must be
  *   explicitly added to each group whose authorities it needs.</li>
- * <li>Authorities come in two flavours: ROLE and CLIENT.  All this means
- *   is that (in the absence of role hierarchy) <code>hasRole("X")</code>
+ * <li>Authorities come (for now) in two flavours: ROLE and CLIENT, but all
+ *   this means (in the absence of role hierarchy): <code>hasRole("X")</code>
  *   can be used as shorthand for <code>hasAuthority("ROLE_X")</code>.</li>
  * </ul>
  * 
  * <h1>Out of the box setup</h1>
  * 
  * <ul>
- * <li>Two ROLE authorities: ROLE_USER and ROLE_ADMIN, conferred by groups
+ * <li>Two roles authorities: ROLE_users and ROLE_admins, conferred by groups
  *   "users" and "admins" respectively.</li>
- * <li>One CLIENT authority: CLIENT_TEST, conferred by group "test".</li>
+ * <li>One client authority: CLIENT_test, conferred by group "test".</li>
  * <li>One account "admin" with password "test" which is a member of both
- *   roles and the test client.</li>
+ *   roles and the one client.</li>
  * </ul>
  * 
  * The out-of-box admin account is there so you can create an admin account
@@ -69,12 +69,10 @@ import org.springframework.stereotype.Component;
  * 
  * We use the <code>Group.groupType</code> field to store the authority
  * flavour ("ROLE", "CLIENT"), which also doubles a the authority prefix.
- * So, for a new group/authority, we collect the group ID (e.g. "admins"),
- * flavour ("ROLE"), and authority name ("ADMIN").
  * 
  * We then create a <code>Group</code> with <code>id = "admins"</code> and
  * <code>type = "ROLE"</code>, and map it to a privilege with 
- * <code>name = group.type + "_" + "ADMIN"</code>.
+ * <code>name = group.type + "_" + "admins"</code>.
  */
 
 @Component
@@ -102,9 +100,9 @@ public class IamService {
             
             LOG.info("create the out-of-box accounts and groups");
             
-            createRole(USERS_GROUP, "USER");
-            createRole(ADMINS_GROUP, "ADMIN");
-            createClient(TEST_GROUP, "TEST");
+            createRole(USERS_GROUP);
+            createRole(ADMINS_GROUP);
+            createClient(TEST_GROUP);
 
             LOG.info("create the out-of-box admin account {} with password {}", INITIAL_ADMIN, INITIAL_PASSWORD);
             
@@ -302,34 +300,31 @@ public class IamService {
     /**
      * Create a role group. No effect if already exists.
      * @param groupId
-     * @param roleName
      * @return the group details with the account list in it
      */
-    public GroupDetail createRole(String groupId, String roleName) {
-        LOG.info("creating role group: {} for role {}", groupId, roleName);
-        return createGroup(groupId, Flavour.ROLE, roleName);
+    public GroupDetail createRole(String groupId) {
+        LOG.info("creating role group: {}", groupId);
+        return createGroup(groupId, Flavour.ROLE);
     }
     
     /**
      * Create a client group. No effect if already exists.
      * @param groupId
-     * @param clientName
      * @return the group details with the account list in it
      */
-    public GroupDetail createClient(String groupId, String clientName) {
-        LOG.info("creating client group: {} for client {}", groupId, clientName);
-        return createGroup(groupId, Flavour.CLIENT, clientName);        
+    public GroupDetail createClient(String groupId) {
+        LOG.info("creating client group: {}", groupId);
+        return createGroup(groupId, Flavour.CLIENT);
     }
     
     /**
      * Create a new group or return existing group.
      * @param groupId name of the group
      * @param flavour the authority flavour (role, client)
-     * @param authName the authority name (e.g. for group "users" use "USER")
      * @return the GroupDetail, with group list
      */
-    protected GroupDetail createGroup(String groupId, Flavour flavour, String authName) {
-        LOG.debug("creating group {} with authority {}_{}", groupId, flavour, authName);        
+    protected GroupDetail createGroup(String groupId, Flavour flavour) {
+        LOG.debug("creating group {} with authority {}_{}", groupId, flavour, groupId);
 
         GroupDetail group = getGroup(groupId, null);
         
@@ -337,16 +332,15 @@ public class IamService {
             
             Group flwGroup = identityService.newGroup(groupId);
             flwGroup.setId(groupId);
-            flwGroup.setName(authName);
             flwGroup.setType(flavour.toString());
             identityService.saveGroup(flwGroup);
             
-            group = new GroupDetail(groupId, flavour.toString(), authName, new String[0]);
+            group = new GroupDetail(groupId, flavour.toString(), new String[0]);
             
-	        String privName = "%s_%s".formatted(flavour, authName);
+	        String privName = "%s_%s".formatted(flavour, groupId);
 	        Privilege priv = identityService.createPrivilege(privName);
 	        
-	        LOG.debug("assigning privilege {} to group {}", privName);        
+	        LOG.debug("assigning privilege {} to group {}", privName, groupId);
 	        identityService.addGroupPrivilegeMapping(priv.getId(), groupId);
         }
         else if (!(group.type.equals(flavour.toString()))) {
@@ -416,7 +410,7 @@ public class IamService {
                 .map(u -> u.getId())
                 .toArray(String[]::new);
             
-            group = new GroupDetail(flwGroup.getId(), flwGroup.getType(), flwGroup.getName(), accounts);
+            group = new GroupDetail(flwGroup.getId(), flwGroup.getType(), accounts);
         }
         
         return group;    
@@ -431,7 +425,7 @@ public class IamService {
         return identityService.createGroupQuery()
                 .groupType(Flavour.ROLE.toString())
                 .orderByGroupId().asc().list().stream()
-                .map(g -> new GroupDetail(g.getId(), g.getType(), g.getName(), null))
+                .map(g -> new GroupDetail(g.getId(), g.getType(), null))
                 .toArray(GroupDetail[]::new);
     }
 
@@ -444,7 +438,7 @@ public class IamService {
         return identityService.createGroupQuery()
                 .groupType(Flavour.CLIENT.toString())
                 .orderByGroupId().asc().list().stream()
-                .map(g -> new GroupDetail(g.getId(), g.getType(), g.getName(), null))
+                .map(g -> new GroupDetail(g.getId(), g.getType(), null))
                 .toArray(GroupDetail[]::new);
     }
 
@@ -456,7 +450,7 @@ public class IamService {
         LOG.trace("retrieve all groups");
         return identityService.createGroupQuery()
                 .orderByGroupId().asc().list().stream()
-                .map(g -> new GroupDetail(g.getId(), g.getType(), g.getName(), null))
+                .map(g -> new GroupDetail(g.getId(), g.getType(), null))
                 .toArray(GroupDetail[]::new);
     }
 
@@ -472,7 +466,6 @@ public class IamService {
     public final record GroupDetail(
         String id,
         String type,
-        String name,
         String[] acounts) {
     }
 }

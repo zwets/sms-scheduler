@@ -17,7 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
-import it.zwets.sms.scheduler.security.IamService;
+import it.zwets.sms.scheduler.iam.IamService;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class IamRestControllerSecurityTests {

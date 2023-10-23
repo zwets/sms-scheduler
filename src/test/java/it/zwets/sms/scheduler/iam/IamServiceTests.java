@@ -1,4 +1,4 @@
-package it.zwets.sms.scheduler.security;
+package it.zwets.sms.scheduler.iam;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import it.zwets.sms.scheduler.security.IamService.AccountDetail;
+import it.zwets.sms.scheduler.iam.IamService.AccountDetail;
 
 @SpringBootTest
 class IamServiceTests {
@@ -166,7 +166,7 @@ class IamServiceTests {
     void testCreateAndDeleteRole() {
         final String NEW_ROLE_ID = "new-role";
         
-        svc.createRole(NEW_ROLE_ID, "MYNEWROLE");
+        svc.createRole(NEW_ROLE_ID);
         assertNotNull(svc.getRole(NEW_ROLE_ID));
         
         svc.deleteGroup(NEW_ROLE_ID);
@@ -177,7 +177,7 @@ class IamServiceTests {
     void testCreateAndDeleteClient() {
         final String NEW_CLIENT_ID = "new-client";
         
-        svc.createRole(NEW_CLIENT_ID, "MYNICLIENT");
+        svc.createRole(NEW_CLIENT_ID);
         assertNotNull(svc.getRole(NEW_CLIENT_ID));
         
         svc.deleteGroup(NEW_CLIENT_ID);

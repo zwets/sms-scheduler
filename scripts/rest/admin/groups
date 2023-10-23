@@ -1,0 +1,10 @@
+#!/bin/bash
+
+CONTEXT=/iam/groups
+USAGE="
+
+  Lists all groups"
+
+. $(realpath $(dirname "$0")/../lib/common.sh)
+
+rest_GET

@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import it.zwets.sms.scheduler.security.IamService;
+import it.zwets.sms.scheduler.iam.IamService;
 
 /**
  * REST controller for the /iam endpoint.

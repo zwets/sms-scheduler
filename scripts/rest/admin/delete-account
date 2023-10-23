@@ -1,10 +1,10 @@
 #!/bin/bash
 
-CONTEXT=/iam/accounts
+CONTEXT=/iam/accounts/
 USAGE="ID
 
-  Delete account ID
-"
+  Delete account ID"
+
 . $(realpath $(dirname "$0")/../lib/common.sh)
 
 (( $# == 1 )) || usage_exit 1

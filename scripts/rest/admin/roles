@@ -1,0 +1,10 @@
+#!/bin/bash
+
+CONTEXT=/iam/roles
+USAGE="
+
+  Lists all roles"
+
+. $(realpath $(dirname "$0")/../lib/common.sh)
+
+rest_GET
