@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# works on /iam and /iam/ and /iam/check
+CONTEXT=/iam
+TEXTONLY=1
+USAGE="
+
+  Check status of the logged-in account"
+
+. $(realpath $(dirname "$0")/../lib/common.sh)
+
+rest_GET

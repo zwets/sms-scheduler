@@ -1,0 +1,33 @@
+#!/bin/bash
+
+CONTEXT=/iam/accounts
+USAGE="ID NAME EMAIL PASSWORD [GROUP ...]
+
+  Create account ID with the given attributes
+
+  POSITIONAL PARAMS
+   ID        Unique account ID
+   NAME      Name of the account
+   EMAIL     E-mail of the user
+   PASSWORD  Password for the account
+   GROUP     Roles and/or clients to assign to the account"
+
+. "$(dirname "$0")/../lib/common.sh"
+
+(($# >= 4)) || usage_exit 1
+
+# Parse the standard attributes
+ID="$1" NAME="$2" EMAIL="$3" PASS="$4"
+shift 4
+
+# Parse the groups list
+GRPS='[ ]'
+(( $# == 0 )) || {
+    GRPS="[ \"$1\""; shift
+    while (( $# )); do GRPS+=",\"$1\""; shift; done
+    GRPS+=' ]'
+}
+
+printf '{ "id": "%s", "name": "%s", "email": "%s", "password": "%s", "groups": %s }' \
+    "$ID" "$NAME" "$EMAIL" "$PASS" "$GRPS" |
+rest_POST

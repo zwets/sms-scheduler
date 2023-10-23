@@ -1,0 +1,11 @@
+#!/bin/bash
+
+CONTEXT=/actuator
+USAGE="[/SUBKEY]
+
+  Queries the actuator at $CONTEXT[SUBKEY]
+"
+
+. $(realpath $(dirname "$0")/../lib/common.sh)
+
+rest_GET "$@"

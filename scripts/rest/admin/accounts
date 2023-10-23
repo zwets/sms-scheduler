@@ -1,0 +1,10 @@
+#!/bin/bash
+
+CONTEXT=/iam/accounts
+USAGE="
+
+  Lists all accounts"
+
+. $(realpath $(dirname "$0")/../lib/common.sh)
+
+rest_GET

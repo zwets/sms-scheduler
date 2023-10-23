@@ -1,0 +1,19 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+create-dummy() {
+    ./create-account $1 $1 $1 $1 "$2"
+}
+
+./create-account nnn '[]'
+./create-account nnt '["test"]'
+./create-account nan '["admins"]'
+./create-account nat '["admins","test"]'
+./create-account unn '["users"]'
+./create-account unt '["users","test"]'
+./create-account uan '["users","admins"]'
+./create-account uat '["users","admins","test"]'
+
+

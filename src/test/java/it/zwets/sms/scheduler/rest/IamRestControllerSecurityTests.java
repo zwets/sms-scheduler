@@ -2,6 +2,7 @@ package it.zwets.sms.scheduler.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -105,23 +106,15 @@ class IamRestControllerSecurityTests {
         // Tests on /accounts/{id} i.e. "my own account"
     
     @Test
-    public void getMyAccountForbiddenForNonUserNonAdmin() {
-        for (String u : nouser_noadmin_accounts) {
-            ResponseEntity<String> response = request(u, "/iam/accounts/" + u);
-            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for non-user '%s'".formatted(u));
-        }
-    }
-
-    @Test
-    public void getMyAccountWorksForUsersAndAdmins() {
-        for (String u : user_or_admin_accounts) {
+    public void getMyAccountWorksForAllAccounts() {
+        for (String u : all_accounts) {
             ResponseEntity<String> response = request(u, "/iam/accounts/" + u);
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should succeed for '%s'".formatted(u));
         }
     }
 
     @Test
-    public void getSomeOneElsesAccountWorksOnlyForAdmins() {
+    public void getAnotherAccountWorksOnlyForAdmins() {
         createAccount("target", null);
         for (String u : admin_accounts) {
             ResponseEntity<String> response = request(u, "/iam/accounts/target");
@@ -150,6 +143,42 @@ class IamRestControllerSecurityTests {
         }
     }
 
+    @Test
+    public void deleteAccountForbiddenForNonAdmins() {
+        throw new NotImplementedException();
+//        for (String u : noadmin_accounts) {
+//            ResponseEntity<String> response = request(u, "/iam/accounts/borkbork");
+//            assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode(), "Should give not found for '%s'".formatted(u));
+//        }
+    }
+
+    @Test
+    public void createAccountForbiddenForNonAdmins() {
+        throw new NotImplementedException();
+//        for (String u : noadmin_accounts) {
+//            ResponseEntity<String> response = request(u, "/iam/accounts/borkbork");
+//            assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode(), "Should give not found for '%s'".formatted(u));
+//        }
+    }
+
+    @Test
+    public void deleteAccountForbiddenForLoggedOnAdmins() {
+        throw new NotImplementedException();
+//        for (String u : admin_accounts) {
+//            ResponseEntity<String> response = request(u, "/iam/accounts/" + u);
+//            assertEquals(HttpStatus.NOT_ACCEPTABLE, response.getStatusCode(), "Should give not acceptable for '%s'".formatted(u));
+//        }
+    }
+    
+    @Test
+    public void getClientUsersAllowedForClientUsers() {
+        for (String u : client_users) {
+            ResponseEntity<String> response = request(u, "/iam/clients/test");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+        }
+    }
+    
+
         // Helpers
     
     private ResponseEntity<String> request(String id, String url) {
@@ -177,6 +206,6 @@ class IamRestControllerSecurityTests {
     private String[] nouser_accounts =  { "nnn", "nnt", "nan", "nat" };
     private String[] admin_accounts =   { "nan", "nat", "uan", "uat" };
     private String[] noadmin_accounts = { "nnn", "nnt", "unn", "unt" };
-    private String[] client_acounts =   { "nnt", "nat", "unt", "uat" };
+    private String[] client_users =     { "unt", "uat" };
     private String[] noclient_acounts = { "nnn", "nan", "unn", "uan" };
 }
