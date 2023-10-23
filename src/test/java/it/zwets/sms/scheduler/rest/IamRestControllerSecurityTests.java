@@ -10,13 +10,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
 import it.zwets.sms.scheduler.security.IamService;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-class IamRestControllerTests {
+class IamRestControllerSecurityTests {
 
     @Autowired(required = true)
     private IamService iamService;
@@ -34,13 +37,9 @@ class IamRestControllerTests {
         createAccount("unt", new String[] { IamService.USERS_GROUP, IamService.TEST_GROUP });
         createAccount("uan", new String[] { IamService.USERS_GROUP, IamService.ADMINS_GROUP });
         createAccount("uat", new String[] { IamService.USERS_GROUP, IamService.ADMINS_GROUP, IamService.TEST_GROUP });
-        createAccount("dummy", new String[] { });
+//        createAccount("dummy", new String[] { });
     }
     
-    private IamService.AccountDetail createAccount(String id, String[] groups) {
-        return iamService.createAccount(new IamService.AccountDetail(id, id, id, groups), id);
-    }
-
     @AfterEach
     public void teardown() {
         iamService.deleteAccount("nnn");
@@ -54,37 +53,68 @@ class IamRestControllerTests {
         iamService.deleteAccount("uat");
     }
 
-    private void deleteAccount(String id) {
-        iamService.deleteAccount(id);
-    }
-
-    private String[] all_accounts =     {
-        "nnn", "nnt", "nan", "nat", "unn", "unt", "uan", "uat" };
-    
-    private String[] user_accounts =    { "unn", "unt", "uan", "uat" };
-    private String[] nouser_accounts =  { "nnn", "nnt", "nan", "nat" };
-    private String[] admin_accounts =   { "nan", "nat", "uan", "uat" };
-    private String[] noadmin_accounts = { "nnn", "nnt", "unn", "unt" };
-    private String[] client_acounts =   { "nnt", "nat", "unt", "uat" };
-    private String[] noclient_acounts = { "nnn", "nan", "unn", "uan" };
+        // General /iam tests
     
     @Test
-    public void anonymousRequestUnauthorised() {
+    public void anonymousRequestOnRootUnauthorised() {
         ResponseEntity<String> response = new TestRestTemplate()
                 .getForEntity("http://localhost:" + port + "/iam", String.class);
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
     
     @Test
-    public void perpetratorRequestUnauthorised() {
+    public void perpetratorRequestOnRootUnauthorised() {
         ResponseEntity<String> response = new TestRestTemplate("uat", "hacker")
                 .getForEntity("http://localhost:" + port + "/iam", String.class);
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
     
     @Test
-    public void getMyAccountWorksForAllAccounts() {
-        for (String u : all_accounts) {
+    public void authenticatedRequestOnRoot() {
+        ResponseEntity<String> response = new TestRestTemplate("nnn", "nnn")
+                .getForEntity("http://localhost:" + port + "/iam", String.class);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+    
+        // Tests on /iam/accounts
+    
+    @Test
+    public void getAccountsForbiddenForNonAdmin() {
+        for (String u : noadmin_accounts) {
+            ResponseEntity<String> response = request(u, "/iam/accounts");
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void getAccountsAllowedForAdmins() {
+        for (String u : admin_accounts) {
+            ResponseEntity<String> response = request(u, "/iam/accounts");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be OK for '%s'".formatted(u));
+        }
+    }
+
+//    @Test
+//    public void postAccountsForbiddenForNonAdmins() {
+//        for (String u : noadmin_accounts) {
+//            ResponseEntity<String> response = postRequest(u, "/iam/accounts");
+//            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
+//        }
+//    }
+
+        // Tests on /accounts/{id} i.e. "my own account"
+    
+    @Test
+    public void getMyAccountForbiddenForNonUserNonAdmin() {
+        for (String u : nouser_noadmin_accounts) {
+            ResponseEntity<String> response = request(u, "/iam/accounts/" + u);
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for non-user '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void getMyAccountWorksForUsersAndAdmins() {
+        for (String u : user_or_admin_accounts) {
             ResponseEntity<String> response = request(u, "/iam/accounts/" + u);
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should succeed for '%s'".formatted(u));
         }
@@ -99,7 +129,7 @@ class IamRestControllerTests {
         }
         for (String u : noadmin_accounts) {
             ResponseEntity<String> response = request(u, "/iam/accounts/target");
-            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should fail for '%s'".formatted(u));
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
         }
         deleteAccount("target");
     }
@@ -108,7 +138,7 @@ class IamRestControllerTests {
     public void getNonExistentAccountForbiddenForNonAdmins() {
         for (String u : noadmin_accounts) {
             ResponseEntity<String> response = request(u, "/iam/accounts/borkbork");
-            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should fail for '%s'".formatted(u));
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
         }
     }
     
@@ -119,9 +149,34 @@ class IamRestControllerTests {
             assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode(), "Should give not found for '%s'".formatted(u));
         }
     }
+
+        // Helpers
     
     private ResponseEntity<String> request(String id, String url) {
         return new TestRestTemplate(id, id).getForEntity("http://localhost:" + port + url, String.class);
     }
     
+//    private ResponseEntity<String> putRequest(String id, String url, String body) {
+//        return new TestRestTemplate(id, id).exchange("http://localhost:" + port + url, HttpMethod.PUT, new RequestEntity<String>(), String.class, body);
+//    }
+    
+    private IamService.AccountDetail createAccount(String id, String[] groups) {
+        return iamService.createAccount(new IamService.AccountDetail(id, id, id, groups), id);
+    }
+
+    private void deleteAccount(String id) {
+        iamService.deleteAccount(id);
+    }
+
+    private String[] all_accounts =            { "nnn", "nnt", "nan", "nat", "unn", "unt", "uan", "uat" };
+    
+    private String[] nouser_noadmin_accounts = { "nnn", "nnt" };
+    private String[] user_or_admin_accounts =  {               "nan", "nat", "unn", "unt", "uan", "uat" };
+    
+    private String[] user_accounts =    { "unn", "unt", "uan", "uat" };
+    private String[] nouser_accounts =  { "nnn", "nnt", "nan", "nat" };
+    private String[] admin_accounts =   { "nan", "nat", "uan", "uat" };
+    private String[] noadmin_accounts = { "nnn", "nnt", "unn", "unt" };
+    private String[] client_acounts =   { "nnt", "nat", "unt", "uat" };
+    private String[] noclient_acounts = { "nnn", "nan", "unn", "uan" };
 }

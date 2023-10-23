@@ -154,7 +154,7 @@ class IamServiceTests {
     }
 
     @Test
-    void removeAdminUserFromTest() {
+    void testRemoveAdminUserFromGroup() {
         svc.removeAccountFromGroup(IamService.INITIAL_ADMIN, IamService.TEST_GROUP);
         assertFalse(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.TEST_GROUP));
         
@@ -163,7 +163,7 @@ class IamServiceTests {
     }
 
     @Test
-    void createAndDeleteRole() {
+    void testCreateAndDeleteRole() {
         final String NEW_ROLE_ID = "new-role";
         
         svc.createRole(NEW_ROLE_ID, "MYNEWROLE");
@@ -174,7 +174,7 @@ class IamServiceTests {
     }
 
     @Test
-    void createAndDeleteClient() {
+    void testCreateAndDeleteClient() {
         final String NEW_CLIENT_ID = "new-client";
         
         svc.createRole(NEW_CLIENT_ID, "MYNICLIENT");

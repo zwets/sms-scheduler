@@ -98,7 +98,7 @@ public class IamService {
         this.identityService = identityService;
         
         if (identityService.createUserQuery().count() == 0) {
-            LOG.debug("no accounts found in database, doing out-of-box setup");
+            LOG.trace("no accounts found in database, doing out-of-box setup");
             
             LOG.info("create the out-of-box accounts and groups");
             
@@ -131,7 +131,7 @@ public class IamService {
      * @throws RuntimeException from back-end if name (or email?) is not unique
      */
     public AccountDetail createAccount(final AccountDetail detail, String password) {
-        LOG.debug("create account: {}", detail.id); 
+        LOG.trace("create account: {}", detail.id); 
 
         AccountDetail account = getAccount(detail.id);
         
@@ -174,7 +174,7 @@ public class IamService {
      */
     public boolean isValidAccount(String id) {
         boolean result = identityService.createUserQuery().userId(id).count() != 0;
-        LOG.debug("isValidAccount({}) -> {}", id, result);
+        LOG.trace("isValidAccount({}) -> {}", id, result);
         return result;
     }
     
@@ -184,14 +184,14 @@ public class IamService {
      * @return
      */
     public AccountDetail getAccount(String id) {
-        LOG.debug("get account: {}", id);
+        LOG.trace("get account: {}", id);
         
         AccountDetail account = null;
         
         User user = identityService.createUserQuery().userId(id).singleResult();
         if (user != null) {
        
-            LOG.debug("retrieve groups for account: {}", id);
+            LOG.trace("retrieve groups for account: {}", id);
             String groups[] = identityService.createGroupQuery()
                 .groupMember(id).list().stream()
                 .map(g -> g.getId())
@@ -209,7 +209,7 @@ public class IamService {
      * @return array of accounts, with the groups null-ed out.
      */
     public AccountDetail[] getAccounts() {
-        LOG.debug("retrieve all accounts");
+        LOG.trace("retrieve all accounts");
         
         return identityService.createUserQuery()
                 .orderByUserId().asc().list().stream()
@@ -223,7 +223,7 @@ public class IamService {
      * @return array of accounts, with the groups null-ed out
      */
     public AccountDetail[] getAccountsInGroup(String groupId) {
-        LOG.debug("retrieve accounts in group: {}", groupId);
+        LOG.trace("retrieve accounts in group: {}", groupId);
         
         return identityService.createUserQuery()
                 .memberOfGroup(groupId)
@@ -243,7 +243,7 @@ public class IamService {
                 .groupId(groupId)
                 .groupMember(accountId)
                 .count() != 0;
-        LOG.debug("isAccountInGroup({},{}) -> {}", accountId, groupId, result);
+        LOG.trace("isAccountInGroup({},{}) -> {}", accountId, groupId, result);
         return result;
     }
 
@@ -277,7 +277,7 @@ public class IamService {
      * @return true iff the password is correct
      */
     public boolean checkPassword(String id, String password) {
-        LOG.debug("check password for account: {}", id);
+        LOG.trace("check password for account: {}", id);
         return identityService.checkPassword(id, password);
     }
     
@@ -287,12 +287,12 @@ public class IamService {
      * @param password
      */
     public void updatePassword(String id, String password) {
-        LOG.debug("update password for account: {}", id);
+        LOG.trace("update password for account: {}", id);
         User user = identityService.createUserQuery().userId(id).singleResult();
         if (user != null) {
             user.setPassword(password);
             identityService.updateUserPassword(user);
-            LOG.debug("password updated for account: {}", id);
+            LOG.info("password updated for account: {}", id);
         }
         else {
             LOG.warn("account does not exist: {}", id);
@@ -372,7 +372,7 @@ public class IamService {
      * @return the group details
      */
     public GroupDetail getRole(String id) {
-        LOG.debug("retrieve role details for id: {}", id);
+        LOG.trace("retrieve role details for id: {}", id);
         return getGroup(id, Flavour.ROLE);
     }
 
@@ -382,7 +382,7 @@ public class IamService {
      * @return the group details
      */
     public GroupDetail getClient(String id) {
-        LOG.debug("retrieve client details for id: {}", id);
+        LOG.trace("retrieve client details for id: {}", id);
         return getGroup(id, Flavour.CLIENT);
     }
 
@@ -392,7 +392,7 @@ public class IamService {
      * @return the group details
      */
     public GroupDetail getGroup(String id) {
-        LOG.debug("retrieve group: {}", id);
+        LOG.trace("retrieve group: {}", id);
         return getGroup(id, null);
     }
 
@@ -403,14 +403,14 @@ public class IamService {
      * @return the group details
      */
     protected GroupDetail getGroup(String id, Flavour flavour) {
-        LOG.debug("retrieve {} group: {}", flavour == null ? "any" : flavour, id);
+        LOG.trace("retrieve {} group: {}", flavour == null ? "any" : flavour, id);
        
         GroupDetail group = null;
         
         Group flwGroup = identityService.createGroupQuery().groupId(id).singleResult();
         if (flwGroup != null && (flavour == null || flavour.toString().equals(flwGroup.getType()))) {
             
-            LOG.debug("retrieve accounts for group: {}", id);
+            LOG.trace("retrieve accounts for group: {}", id);
             String accounts[] = identityService.createUserQuery()
                 .memberOfGroup(id).list().stream()
                 .map(u -> u.getId())
@@ -427,7 +427,7 @@ public class IamService {
      * @return the list of all role groups, with null-ed out accounts list
      */
     public GroupDetail[] getRoles() {
-        LOG.debug("retrieve all roles");
+        LOG.trace("retrieve all roles");
         return identityService.createGroupQuery()
                 .groupType(Flavour.ROLE.toString())
                 .orderByGroupId().asc().list().stream()
@@ -440,7 +440,7 @@ public class IamService {
      * @return the list of all client groups, with null-ed out accounts list
      */
     public GroupDetail[] getClients() {
-        LOG.debug("retrieve all clients");
+        LOG.trace("retrieve all clients");
         return identityService.createGroupQuery()
                 .groupType(Flavour.CLIENT.toString())
                 .orderByGroupId().asc().list().stream()
@@ -453,7 +453,7 @@ public class IamService {
      * @return the list of all groups, but with null-ed out accounts list
      */
     public GroupDetail[] getGroups() {
-        LOG.debug("retrieve all groups");
+        LOG.trace("retrieve all groups");
         return identityService.createGroupQuery()
                 .orderByGroupId().asc().list().stream()
                 .map(g -> new GroupDetail(g.getId(), g.getType(), g.getName(), null))
