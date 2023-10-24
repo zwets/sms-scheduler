@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * IAM - identity and access management service.
- * 
+ *
  * This service manages accounts, groups, roles and authorities.  It is
  * built on top of the Flowable IDM component, which ties in with Spring
  * Security.
@@ -77,42 +77,40 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class IamService {
-    
+
     private static final Logger LOG = LoggerFactory.getLogger(IamService.class);
-    
+
     public static final String USERS_GROUP = "users";
     public static final String ADMINS_GROUP = "admins";
     public static final String TEST_GROUP = "test";
-    
+
     public static final String INITIAL_ADMIN = "admin";
     public static final String INITIAL_PASSWORD = "test";
 
     public enum Flavour { ROLE, CLIENT };
-    
+
     @Autowired
     private IdmIdentityService identityService;
-   
+
     public IamService(IdmIdentityService identityService) {
         this.identityService = identityService;
-        
-        if (identityService.createUserQuery().count() == 0) {
-            LOG.trace("no accounts found in database, doing out-of-box setup");
-            
-            LOG.info("create the out-of-box accounts and groups");
-            
-            createRole(USERS_GROUP);
-            createRole(ADMINS_GROUP);
-            createClient(TEST_GROUP);
 
-            LOG.info("create the out-of-box admin account {} with password {}", INITIAL_ADMIN, INITIAL_PASSWORD);
-            
+        if (identityService.createUserQuery().count() == 0) {
+            LOG.debug("no accounts found in database, create out-of-box accounts and groups");
+
+            createGroup(Flavour.ROLE, USERS_GROUP);
+            createGroup(Flavour.ROLE, ADMINS_GROUP);
+            createGroup(Flavour.CLIENT, TEST_GROUP);
+
+            LOG.info("create out-of-box admin account {} with password {}", INITIAL_ADMIN, INITIAL_PASSWORD);
+
             createAccount(new AccountDetail(
                     INITIAL_ADMIN,
                     "Default Admin User",
                     "nobody@example.com",
-                    new String[]{ USERS_GROUP, ADMINS_GROUP, TEST_GROUP }),
-                    INITIAL_PASSWORD);
-            
+                    INITIAL_PASSWORD,
+                    new String[]{ USERS_GROUP, ADMINS_GROUP, TEST_GROUP }));
+
             LOG.warn("**IMPORTANT** remove the out-of-box {} account once you have"
                     + " used it set up an admin account for yourself", INITIAL_ADMIN);
         }
@@ -120,7 +118,7 @@ public class IamService {
             LOG.debug("user accounts already present, skipping out-of-box account setup");
         }
     }
- 
+
     /**
      * Create an account, no action if an account by this ID already exists.
      * @param details the id, name, email and optional groups to add the account to
@@ -128,24 +126,25 @@ public class IamService {
      * @return the Account found or created
      * @throws RuntimeException from back-end if name (or email?) is not unique
      */
-    public AccountDetail createAccount(final AccountDetail detail, String password) {
-        LOG.trace("create account: {}", detail.id); 
+    public AccountDetail createAccount(final AccountDetail detail) {
+        LOG.trace("create account: {}", detail.id);
 
         AccountDetail account = getAccount(detail.id);
-        
+
         if (account == null) {
 
             account = new AccountDetail(
                     detail.id,
                     detail.name,
                     detail.email,
+                    detail.password,
                     detail.groups == null ? new String[0] : Arrays.copyOf(detail.groups, detail.groups.length));
-            
+
             LOG.info("creating account: {}", account.id);
             User user = identityService.newUser(account.id);
             user.setDisplayName(account.name);
             user.setEmail(account.email);
-            user.setPassword(password);
+            user.setPassword(account.password);
             identityService.saveUser(user);
 
             for (String groupId : account.groups) {
@@ -175,7 +174,7 @@ public class IamService {
         LOG.trace("isValidAccount({}) -> {}", id, result);
         return result;
     }
-    
+
     /**
      * Return account details for id, or null if not found.
      * @param id the account Id to look up
@@ -183,21 +182,14 @@ public class IamService {
      */
     public AccountDetail getAccount(String id) {
         LOG.trace("get account: {}", id);
-        
+
         AccountDetail account = null;
-        
-        User user = identityService.createUserQuery().userId(id).singleResult();
-        if (user != null) {
-       
-            LOG.trace("retrieve groups for account: {}", id);
-            String groups[] = identityService.createGroupQuery()
-                .groupMember(id).list().stream()
-                .map(g -> g.getId())
-                .toArray(String[]::new);
-            
-            account = new AccountDetail(user.getId(), user.getDisplayName(), user.getEmail(), groups);
+
+        User u = identityService.createUserQuery().userId(id).singleResult();
+        if (u != null) {
+            account = new AccountDetail(u.getId(), u.getDisplayName(), u.getEmail(), null, groupList(u.getId()));
         }
-        
+
         return account;
     }
 
@@ -208,10 +200,10 @@ public class IamService {
      */
     public AccountDetail[] getAccounts() {
         LOG.trace("retrieve all accounts");
-        
+
         return identityService.createUserQuery()
                 .orderByUserId().asc().list().stream()
-                .map(u -> new AccountDetail(u.getId(), u.getDisplayName(), u.getEmail(), null))
+                .map(u -> new AccountDetail(u.getId(), u.getDisplayName(), u.getEmail(), null, groupList(u.getId())))
                 .toArray(AccountDetail[]::new);
     }
 
@@ -222,11 +214,11 @@ public class IamService {
      */
     public AccountDetail[] getAccountsInGroup(String groupId) {
         LOG.trace("retrieve accounts in group: {}", groupId);
-        
+
         return identityService.createUserQuery()
                 .memberOfGroup(groupId)
                 .orderByUserId().asc().list().stream()
-                .map(u -> new AccountDetail(u.getId(), u.getDisplayName(), u.getEmail(), null))
+                .map(u -> new AccountDetail(u.getId(), u.getDisplayName(), u.getEmail(), null, groupList(u.getId())))
                 .toArray(AccountDetail[]::new);
     }
 
@@ -257,7 +249,7 @@ public class IamService {
             identityService.createMembership(accountId, groupId);
         }
     }
-    
+
     /**
      * Remove account from group.
      * @param accountId
@@ -267,7 +259,7 @@ public class IamService {
         LOG.info("remove account {} from group {}", accountId, groupId);
         identityService.deleteMembership(accountId, groupId);
     }
-    
+
     /**
      * Check password for acount id
      * @param id
@@ -278,7 +270,7 @@ public class IamService {
         LOG.trace("check password for account: {}", id);
         return identityService.checkPassword(id, password);
     }
-    
+
     /**
      * Change password for id
      * @param accountId
@@ -296,26 +288,6 @@ public class IamService {
             LOG.warn("account does not exist: {}", id);
         }
     }
-
-    /**
-     * Create a role group. No effect if already exists.
-     * @param groupId
-     * @return the group details with the account list in it
-     */
-    public GroupDetail createRole(String groupId) {
-        LOG.info("creating role group: {}", groupId);
-        return createGroup(groupId, Flavour.ROLE);
-    }
-    
-    /**
-     * Create a client group. No effect if already exists.
-     * @param groupId
-     * @return the group details with the account list in it
-     */
-    public GroupDetail createClient(String groupId) {
-        LOG.info("creating client group: {}", groupId);
-        return createGroup(groupId, Flavour.CLIENT);
-    }
     
     /**
      * Create a new group or return existing group.
@@ -323,23 +295,22 @@ public class IamService {
      * @param flavour the authority flavour (role, client)
      * @return the GroupDetail, with group list
      */
-    protected GroupDetail createGroup(String groupId, Flavour flavour) {
+    public GroupDetail createGroup(Flavour flavour, String groupId) {
         LOG.debug("creating group {} with authority {}_{}", groupId, flavour, groupId);
 
-        GroupDetail group = getGroup(groupId, null);
-        
+        GroupDetail group = getGroup(groupId);
         if (group == null) {
-            
+
             Group flwGroup = identityService.newGroup(groupId);
             flwGroup.setId(groupId);
             flwGroup.setType(flavour.toString());
             identityService.saveGroup(flwGroup);
-            
+
             group = new GroupDetail(groupId, flavour.toString(), new String[0]);
-            
+
 	        String privName = "%s_%s".formatted(flavour, groupId);
 	        Privilege priv = identityService.createPrivilege(privName);
-	        
+	
 	        LOG.debug("assigning privilege {} to group {}", privName, groupId);
 	        identityService.addGroupPrivilegeMapping(priv.getId(), groupId);
         }
@@ -347,7 +318,7 @@ public class IamService {
             throw new RuntimeException("cannot create %s group %s: %s group with that ID exists"
                     .formatted(flavour, groupId, group.type));
         }
-        
+
         return group;
     }
 
@@ -359,99 +330,79 @@ public class IamService {
         LOG.debug("delete group {}", groupId);
         identityService.deleteGroup(groupId);
     }
-    
-    /**
-     * Retrieve details of role as well as its account id list, or null if not found
-     * @param id
-     * @return the group details
-     */
-    public GroupDetail getRole(String id) {
-        LOG.trace("retrieve role details for id: {}", id);
-        return getGroup(id, Flavour.ROLE);
-    }
 
     /**
-     * Retrieve details of client group, with list of member accounts, or null if not found.
-     * @param id
-     * @return the group details
-     */
-    public GroupDetail getClient(String id) {
-        LOG.trace("retrieve client details for id: {}", id);
-        return getGroup(id, Flavour.CLIENT);
-    }
-
-    /**
-     * Retrieve details of group (of any type), with list of member accounts, or null if not found.
+     * Retrieve details of group (of any type)
      * @param id
      * @return the group details
      */
     public GroupDetail getGroup(String id) {
         LOG.trace("retrieve group: {}", id);
-        return getGroup(id, null);
-    }
-
-    /**
-     * Retrieve group with id and optional type, including member account ids, or null if not found.
-     * @param id the role or client ID
-     * @param flavour the group type to filter on or null to return any type
-     * @return the group details
-     */
-    protected GroupDetail getGroup(String id, Flavour flavour) {
-        LOG.trace("retrieve {} group: {}", flavour == null ? "any" : flavour, id);
-       
+        
         GroupDetail group = null;
         
         Group flwGroup = identityService.createGroupQuery().groupId(id).singleResult();
-        if (flwGroup != null && (flavour == null || flavour.toString().equals(flwGroup.getType()))) {
-            
-            LOG.trace("retrieve accounts for group: {}", id);
-            String accounts[] = identityService.createUserQuery()
-                .memberOfGroup(id).list().stream()
-                .map(u -> u.getId())
-                .toArray(String[]::new);
-            
-            group = new GroupDetail(flwGroup.getId(), flwGroup.getType(), accounts);
+        if (flwGroup != null) {
+            group = new GroupDetail(flwGroup.getId(), flwGroup.getType(), memberList(id));
         }
         
-        return group;    
+        return group;
     }
 
     /**
-     * Retrieve all role groups (without their members)
-     * @return the list of all role groups, with null-ed out accounts list
+     * Retrieve group with id and optional flavour
+     * @param flavour the group type to filter on
+     * @param id the group Id
+     * @return the group details
      */
-    public GroupDetail[] getRoles() {
-        LOG.trace("retrieve all roles");
-        return identityService.createGroupQuery()
-                .groupType(Flavour.ROLE.toString())
-                .orderByGroupId().asc().list().stream()
-                .map(g -> new GroupDetail(g.getId(), g.getType(), null))
-                .toArray(GroupDetail[]::new);
+    public GroupDetail getGroup(Flavour flavour, String id) {
+        LOG.trace("retrieve {} group: {}", flavour == null ? "any" : flavour, id);
+        GroupDetail group = getGroup(id);
+        return group != null && flavour != null && group.type.equals(flavour.toString()) ? group : null;
     }
 
     /**
-     * Retrieve all client groups (without their members)
-     * @return the list of all client groups, with null-ed out accounts list
-     */
-    public GroupDetail[] getClients() {
-        LOG.trace("retrieve all clients");
-        return identityService.createGroupQuery()
-                .groupType(Flavour.CLIENT.toString())
-                .orderByGroupId().asc().list().stream()
-                .map(g -> new GroupDetail(g.getId(), g.getType(), null))
-                .toArray(GroupDetail[]::new);
-    }
-
-    /**
-     * Retrieve all groups (role groups and client groups)
-     * @return the list of all groups, but with null-ed out accounts list
+     * Retrieve all groups
+     * @return the list of all groups
      */
     public GroupDetail[] getGroups() {
-        LOG.trace("retrieve all groups");
+        LOG.debug("retrieve all groups");
         return identityService.createGroupQuery()
                 .orderByGroupId().asc().list().stream()
-                .map(g -> new GroupDetail(g.getId(), g.getType(), null))
+                .map(g -> new GroupDetail(g.getId(), g.getType(), memberList(g.getId())))
                 .toArray(GroupDetail[]::new);
+    }
+
+    /**
+     * Retrieve the all groups of the specified flavour
+     * @param flavour
+     * @return the list
+     */
+    public GroupDetail[] getGroups(Flavour flavour) {
+        LOG.debug("retrieve all groups with flavour {}", flavour);
+        return identityService.createGroupQuery()
+                .groupType(flavour.toString())
+                .orderByGroupId().asc().list().stream()
+                .map(g -> new GroupDetail(g.getId(), g.getType(), memberList(g.getId())))
+                .toArray(GroupDetail[]::new);
+    }
+
+    /* Helper to return the group list for an account. */
+    private String[] groupList(String accountId) {
+        LOG.trace("retrieve groups for account: {}", accountId);
+        return identityService.createGroupQuery()
+            .groupMember(accountId).list().stream()
+            .map(g -> g.getId())
+            .toArray(String[]::new);
+    }
+ 
+    /* Helper to return the account list for a group. */
+    private String[] memberList(String groupId) {
+        LOG.trace("retrieve accounts for group: {}", groupId);
+        return identityService.createUserQuery()
+            .memberOfGroup(groupId).list().stream()
+            .map(u -> u.getId())
+            .toArray(String[]::new);
     }
 
     /** DTO to carry account information to and from service. */
@@ -459,6 +410,7 @@ public class IamService {
         String id,
         String name,
         String email,
+        String password,
         String[] groups) {
     }
 

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import it.zwets.sms.scheduler.iam.IamService;
+import it.zwets.sms.scheduler.iam.IamService.Flavour;
 
 /**
  * REST controller for the /iam endpoint.
@@ -60,7 +61,7 @@ public class IamRestController {
 
         String res = "Hello there, %s\n".formatted(userId);
         
-        if (roles.contains("ADMIN")) {
+        if (roles.contains("admins")) {
             
             res += "\nAs an admin you have access to:\n"
                     + "  /iam/accounts          : lists all accounts, post new accounts\n"
@@ -73,7 +74,7 @@ public class IamRestController {
                     + "  /iam/clients           : lists the clients of the service\n"
                     + "  /iam/clients/test      : accounts for the out-of-the-box test client\n";
             
-            if (!roles.contains("USER")) {
+            if (!roles.contains("users")) {
                 
 	            res += "\nNOTE: your account is a member of /iam/roles/admins,\n"
 	                    + "but not of /iam/roles/users.  This is fine, it just\n"
@@ -81,14 +82,14 @@ public class IamRestController {
 	                    + "but not use the application yourself.\n";
             }
         }
-        else if (roles.contains("USER"))
+        else if (roles.contains("users"))
             res += "\nPlease find your account information at: /iam/account/%s\n".formatted(userId);
         else
             res += "\nYou have a working login but no access to the application.\n"
                     + "An administrator will need to add you to the 'users' group.\n";
         
         if (clients.isEmpty())
-            if (!roles.contains("USER"))
+            if (!roles.contains("users"))
                 res += "\nYou will also need to be added to one or more 'client' groups.\n";
             else
 	            res += "\nYou are not authorised for any clients.\n"
@@ -108,7 +109,7 @@ public class IamRestController {
         // Accounts
     
     @GetMapping(path = "accounts", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('admins')")
     public IamService.AccountDetail[] getAccounts() {
         LOG.trace("REST GET accounts");
         return iamService.getAccounts();
@@ -120,16 +121,9 @@ public class IamRestController {
         String email,
         String password,
         String[] groups) { }
-    
-    @PostMapping(path = "accounts", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
-    public IamService.AccountDetail createAccount(@RequestBody AccountDetail a) {
-        LOG.trace("REST POST accounts");
-        return iamService.createAccount(new IamService.AccountDetail(a.id, a.name, a.email, a.groups), a.password);
-    }
 
     @GetMapping(path = "accounts/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN') || authentication.name == #id")
+    @PreAuthorize("hasRole('admins') || authentication.name == #id")
     public IamService.AccountDetail getAccount(@PathVariable String id) {
         LOG.trace("REST GET accounts/{}", id);
         IamService.AccountDetail account = iamService.getAccount(id);
@@ -139,19 +133,29 @@ public class IamRestController {
         return account;
     }
 
+    @PostMapping(path = "accounts", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('admins')")
+    public IamService.AccountDetail postAccount(@RequestBody AccountDetail a) {
+        LOG.debug("REST POST accounts");
+        return iamService.createAccount(new IamService.AccountDetail(a.id, a.name, a.email, a.password, a.groups));
+    }
+
     @PutMapping(path = "accounts/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
-    public IamService.AccountDetail updateAccount(@PathVariable String id) {
+    @PreAuthorize("hasRole('admins')")
+    public IamService.AccountDetail putAccount(@RequestBody AccountDetail a) {
+        LOG.debug("REST PUT accounts/{}", a.id);
+        return iamService.createAccount(new IamService.AccountDetail(a.id, a.name, a.email, a.password, a.groups));
+    }
+    
+    @PutMapping(path = "accounts/{id}/password", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PreAuthorize("hasRole('admins') || authentication.name == #id")
+    public void updatePassword(@PathVariable String id, @PathVariable String password) {
         LOG.trace("REST PUT accounts/{}", id);
-        IamService.AccountDetail account = iamService.createAccount(null, id);
-        if (account == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + id);
-        }
-        return account;
+        iamService.updatePassword(id, password);
     }
 
     @DeleteMapping(path = "accounts/{id}")
-    @PreAuthorize("hasRole('ADMIN') && authentication.name != #id")
+    @PreAuthorize("hasRole('admins') && authentication.name != #id")
     public void deleteAccount(@PathVariable String id) {
         LOG.trace("REST DELETE accounts/{}", id);
         iamService.deleteAccount(id);
@@ -160,14 +164,14 @@ public class IamRestController {
         // Groups
     
     @GetMapping(path = "groups", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('admins')")
     public IamService.GroupDetail[] getGroups() {
         LOG.trace("REST GET groups");
         return iamService.getGroups();
     }
     
     @GetMapping(path = "groups/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('admins')")
     public IamService.GroupDetail getGroup(@PathVariable String id) {
         LOG.trace("REST GET groups/{}", id);
         IamService.GroupDetail group = iamService.getGroup(id);
@@ -178,17 +182,17 @@ public class IamRestController {
     }
 
     @GetMapping(path = "roles", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('admins')")
     public IamService.GroupDetail[] getRoles() {
         LOG.trace("REST GET roles");
-        return iamService.getRoles();
+        return iamService.getGroups(Flavour.ROLE);
     }
     
     @GetMapping(path = "roles/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('admins')")
     public IamService.GroupDetail getRole(@PathVariable String id) {
         LOG.trace("REST GET roles/{}", id);
-        IamService.GroupDetail role = iamService.getClient(id);
+        IamService.GroupDetail role = iamService.getGroup(Flavour.CLIENT, id);
         if (role == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found: " + id);
         }
@@ -196,17 +200,17 @@ public class IamRestController {
     }
 
     @GetMapping(path = "clients", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('admins')")
     public IamService.GroupDetail[] getClients() {
         LOG.trace("REST GET clients");
-        return iamService.getClients();
+        return iamService.getGroups(Flavour.CLIENT);
     }
     
     @GetMapping(path = "clients/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAuthority('ROLE_' + 'DMIN') || (hasRole('USER') && hasAuthority('CLIENT_' + #id))")
+    @PreAuthorize("hasRole('admins') || (hasRole('users') && hasAuthority('CLIENT_' + #id))")
     public IamService.GroupDetail getClient(@PathVariable String id) {
         LOG.trace("REST GET clients/{}", id);
-        IamService.GroupDetail client = iamService.getClient(id);
+        IamService.GroupDetail client = iamService.getGroup(Flavour.CLIENT, id);
         if (client == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Client not found: " + id);
         }

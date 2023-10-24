@@ -3,9 +3,9 @@ package it.zwets.sms.scheduler.rest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,17 +18,15 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import it.zwets.sms.scheduler.iam.IamService;
 
@@ -58,8 +56,9 @@ class IamRestControllerFunctionalTests {
     @Test
     public void getAccountList() {
         
-        ResponseEntity<String> response = getRequest("root", "/iam/accounts");
+        ResponseEntity<String> response = request("root", "/iam/accounts");
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        
         JsonNode root = asJson(response);
         boolean foundUser = false;
         boolean foundRoot = false;
@@ -71,34 +70,36 @@ class IamRestControllerFunctionalTests {
     }
 
     @Test
-    public void createAccount() {
-        String jsonAcct = makeJsonAccount("new-user");
-
-        TestRestTemplate tmp = new TestRestTemplate("root", "root");
-        
-        List<MediaType> mt = new ArrayList<MediaType>();
-        mt.add(MediaType.APPLICATION_JSON);
-        HttpEntity<String> reqEnt = new HttpEntity<>(jsonAcct);
-        reqEnt.getHeaders().setAccept(mt);
-        
-        ResponseEntity<String> rsp = tmp.postForEntity("http://localhost:" + port + "/iam/accounts", reqEnt, String.class);
-        
-//        ResponseEntity<String> rsp = RequestEntity<String>.post("http://localhost:" + port + "/iam/accounts").accept(MediaType.APPLICATION_JSON_VALUE);
-        assertEquals(HttpStatus.OK, rsp.getStatusCode());
+    public void testUserJson() {
+        String account = userJson("bork0", "users", "admins");
+        LOG.debug("This is not OK: {}", account);
+        JsonNode root = parseJson(account);
+        assertEquals("bork0", root.get("id").textValue());
+        assertTrue(root.get("groups").isArray());
     }
-        // Helpers
     
-    private IamService.AccountDetail createAccount(String id, String[] groups) {
-        return iamService.createAccount(new IamService.AccountDetail(id, id, id, groups), id);
+    @Test
+    public void createAccountWithPost() {
+        ResponseEntity<String> response = postRequest("root", "/iam/accounts", userJson("bork1", "users", "admins"));
+        assertEquals(HttpStatus.OK, response.getStatusCode());        
+        
+        JsonNode root = asJson(response);
+        assertEquals("bork1", root.get("id").textValue());
+        assertEquals(2, root.get("groups").size());
     }
-
-    private void deleteAccount(String id) {
-        iamService.deleteAccount(id);
+    
+    @Test
+    public void createAccountWithPut() {
+        ResponseEntity<String> response = putRequest("root", "/iam/accounts/bork2", userJson("bork2", "users"));
+        LOG.info("PUT response: {}", response.getBody());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        
+        JsonNode root = asJson(response);
+        assertEquals("bork2", root.get("id").textValue());
+        assertEquals(1, root.get("groups").size());
     }
-
-    private ResponseEntity<String> getRequest(String id, String url) {
-        return new TestRestTemplate(id, id).getForEntity("http://localhost:" + port + url, String.class);
-    }
+    
+        // Helpers
     
     private JsonNode asJson(ResponseEntity<String> response) {
         return parseJson(response.getBody());
@@ -113,22 +114,49 @@ class IamRestControllerFunctionalTests {
         }
     }
     
-    private String makeJsonAccount(String id) {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode root = mapper.createObjectNode();
-        root.put("id", id).put("name", id).put("email", id).put("password", id).put("groups", mapper.createArrayNode());
-        String jsonStr = null;
-        try {
-            jsonStr = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-        LOG.debug("JsonNode: " + jsonStr);
-        return jsonStr;
+    private String userJson(String name, String... groups) {
+        return makeUserJson(name, name, name, name, groups);
     }
     
-//    private ResponseEntity<String> putRequest(String id, String url, String body) {
-//        return new TestRestTemplate(id, id).exchange("http://localhost:" + port + url, HttpMethod.PUT, new RequestEntity<String>(), String.class, body);
-//    }
+    private String makeUserJson(String id, String name, String email, String password, String[] groups) {
+        return "{ 'id': '%s', 'name': '%s', 'email': '%s', 'password': '%s', 'groups': [ %s ] }"
+                .replace('\'', '"')
+                .formatted(id, name, email, password, 
+                        Arrays.stream(groups).map(s -> "\"%s\"".formatted(s)).collect(Collectors.joining(",")));
+    }
     
+    private IamService.AccountDetail createAccount(String id, String[] groups) {
+        return iamService.createAccount(new IamService.AccountDetail(id, id, id, id, groups));
+    }
+
+    private void deleteAccount(String id) {
+        iamService.deleteAccount(id);
+    }
+    
+    private ResponseEntity<String> exchange(String uid, String url, HttpMethod verb, HttpEntity<String> entity) {
+        return new TestRestTemplate(uid,uid).exchange("http://localhost:" + port + url, verb, entity, String.class);
+    }
+    
+    private ResponseEntity<String> request(String id, String url) {
+        return exchange(id, url, HttpMethod.GET, null);
+    }
+    
+    private ResponseEntity<String> deleteRequest(String id, String url) {
+        return exchange(id, url, HttpMethod.DELETE, null);
+    }
+    
+    private ResponseEntity<String> postRequest(String id, String url, String json) {
+        return exchange(id, url, HttpMethod.POST, makeEntity(json));
+    }
+    
+    private ResponseEntity<String> putRequest(String id, String url, String json) {
+        return exchange(id, url, HttpMethod.PUT, makeEntity(json));
+    }
+    
+    private HttpEntity<String> makeEntity(String json) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        return new HttpEntity<String>(json, headers);        
+    }
 }

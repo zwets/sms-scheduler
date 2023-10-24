@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import it.zwets.sms.scheduler.iam.IamService.AccountDetail;
+import it.zwets.sms.scheduler.iam.IamService.Flavour;
 
 @SpringBootTest
 class IamServiceTests {
@@ -25,32 +26,32 @@ class IamServiceTests {
 
     @Test
     void usersRoleGroupPresent() {
-        assertNotNull(svc.getRole(IamService.USERS_GROUP));
+        assertNotNull(svc.getGroup(Flavour.ROLE, IamService.USERS_GROUP));
     }
 
     @Test
     void usersRoleGroupNotFoundAsClientGroup() {
-        assertNull(svc.getClient(IamService.USERS_GROUP));
+        assertNull(svc.getGroup(Flavour.CLIENT, IamService.USERS_GROUP));
     }
     
     @Test
     void adminsRolePresent() {
-        assertNotNull(svc.getRole(IamService.ADMINS_GROUP));
+        assertNotNull(svc.getGroup(Flavour.ROLE, IamService.ADMINS_GROUP));
     }
 
     @Test
     void testClientPresent() {
-        assertNotNull(svc.getClient(IamService.TEST_GROUP));
+        assertNotNull(svc.getGroup(Flavour.CLIENT, IamService.TEST_GROUP));
     }
     
     @Test
     void testRoleCount() {
-        assertEquals(2, svc.getRoles().length);
+        assertEquals(2, svc.getGroups(Flavour.ROLE).length);
     }
     
     @Test
     void testClientCount() {
-        assertEquals(1, svc.getClients().length);
+        assertEquals(1, svc.getGroups(Flavour.CLIENT).length);
     }
 
     @Test
@@ -60,7 +61,7 @@ class IamServiceTests {
     
     @Test
     void noTestRolePresent() {
-        assertNull(svc.getRole(IamService.TEST_GROUP));
+        assertNull(svc.getGroup(Flavour.ROLE, IamService.TEST_GROUP));
     }
     
     @Test
@@ -68,8 +69,8 @@ class IamServiceTests {
         final String id = "newid1";
         final String password = "my-new-password";
         
-        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", null);
-        svc.createAccount(account, password);
+        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", password, null);
+        svc.createAccount(account);
         
         AccountDetail found = svc.getAccount(id);
         assertEquals(account.id(), found.id());
@@ -88,8 +89,8 @@ class IamServiceTests {
         final String password = "my-new-password";
         final String groups[] = { IamService.ADMINS_GROUP };
         
-        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", groups);
-        svc.createAccount(account, password);
+        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", password, groups);
+        svc.createAccount(account);
         
         AccountDetail found = svc.getAccount(id);
         assertEquals(account.id(), found.id());
@@ -105,8 +106,8 @@ class IamServiceTests {
     void testCreateAccountWithEmptyPassword() {
         final String id = "newid4";
         
-        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", null);
-        svc.createAccount(account, "");
+        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", "", null);
+        svc.createAccount(account);
         
         AccountDetail found = svc.getAccount(id);
         assertEquals(account.id(), found.id());
@@ -166,21 +167,21 @@ class IamServiceTests {
     void testCreateAndDeleteRole() {
         final String NEW_ROLE_ID = "new-role";
         
-        svc.createRole(NEW_ROLE_ID);
-        assertNotNull(svc.getRole(NEW_ROLE_ID));
+        svc.createGroup(Flavour.ROLE, NEW_ROLE_ID);
+        assertNotNull(svc.getGroup(Flavour.ROLE, NEW_ROLE_ID));
         
         svc.deleteGroup(NEW_ROLE_ID);
-        assertNull(svc.getRole(NEW_ROLE_ID));
+        assertNull(svc.getGroup(Flavour.ROLE, NEW_ROLE_ID));
     }
 
     @Test
     void testCreateAndDeleteClient() {
         final String NEW_CLIENT_ID = "new-client";
         
-        svc.createRole(NEW_CLIENT_ID);
-        assertNotNull(svc.getRole(NEW_CLIENT_ID));
+        svc.createGroup(Flavour.CLIENT, NEW_CLIENT_ID);
+        assertNotNull(svc.getGroup(Flavour.CLIENT, NEW_CLIENT_ID));
         
         svc.deleteGroup(NEW_CLIENT_ID);
-        assertNull(svc.getRole(NEW_CLIENT_ID));
+        assertNull(svc.getGroup(Flavour.ROLE, NEW_CLIENT_ID));
     }
 }
