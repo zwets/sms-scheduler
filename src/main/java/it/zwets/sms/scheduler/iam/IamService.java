@@ -2,6 +2,7 @@ package it.zwets.sms.scheduler.iam;
 
 import java.util.Arrays;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.flowable.idm.api.Group;
 import org.flowable.idm.api.IdmIdentityService;
 import org.flowable.idm.api.Privilege;
@@ -155,6 +156,11 @@ public class IamService {
         return account;
     }
 
+    public AccountDetail updateAccount(final AccountDetail detail) {
+        LOG.trace("update account: {}", detail.id);
+        throw new NotImplementedException();
+    }
+    
     /**
      * Delete account, ignored if it does not exist.
      * @param id

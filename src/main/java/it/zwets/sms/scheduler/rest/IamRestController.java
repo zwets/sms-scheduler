@@ -116,11 +116,7 @@ public class IamRestController {
     }
 
     private final record AccountDetail(
-        String id,
-        String name,
-        String email,
-        String password,
-        String[] groups) { }
+        String id, String name, String email, String password, String[] groups) { }
 
     @GetMapping(path = "accounts/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('admins') || authentication.name == #id")
@@ -137,14 +133,29 @@ public class IamRestController {
     @PreAuthorize("hasRole('admins')")
     public IamService.AccountDetail postAccount(@RequestBody AccountDetail a) {
         LOG.debug("REST POST accounts");
+        if (iamService.isValidAccount(a.id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Account %s already exists".formatted(a.id));
+        }
         return iamService.createAccount(new IamService.AccountDetail(a.id, a.name, a.email, a.password, a.groups));
     }
 
     @PutMapping(path = "accounts/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('admins')")
-    public IamService.AccountDetail putAccount(@RequestBody AccountDetail a) {
+    @PreAuthorize("hasRole('admins') || authentication.name == #id")
+    public IamService.AccountDetail putAccount(@PathVariable String id, @RequestBody AccountDetail a) {
         LOG.debug("REST PUT accounts/{}", a.id);
-        return iamService.createAccount(new IamService.AccountDetail(a.id, a.name, a.email, a.password, a.groups));
+        
+        if (a.id != null && !a.id.isBlank() && !a.id.equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account URL %s does not match enitity: %s".formatted(id, a.id));
+        }
+        
+        if (iamService.isValidAccount(id)) {
+	        LOG.debug("REST PUT UPDATE accounts/{}", id);
+            return iamService.updateAccount(new IamService.AccountDetail(id, a.name, a.email, a.password, a.groups));
+        }
+        else {
+	        LOG.debug("REST PUT CREATE accounts/{}", id);
+	        return iamService.createAccount(new IamService.AccountDetail(id, a.name, a.email, a.password, a.groups));
+        }
     }
     
     @PutMapping(path = "accounts/{id}/password", consumes = MediaType.TEXT_PLAIN_VALUE)
