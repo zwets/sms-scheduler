@@ -3,22 +3,20 @@ package it.zwets.sms.scheduler.rest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -28,14 +26,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.zwets.sms.scheduler.iam.IamService;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@TestInstance(Lifecycle.PER_CLASS)
 class IamRestControllerSecurityTests {
 
-    @Autowired(required = true)
-    private IamService iamService;
-    
     @LocalServerPort
     private int port;
 
+    @Autowired
+    private IamService iamService;
+    
+    private RestTestHelper rest;
+    
+    @BeforeAll
+    public void beforeAll() {
+        rest = new RestTestHelper("http://localhost", port);
+    }
+    
     @BeforeEach
     public void setup() {
         createAccount("nnn", new String[] { });
@@ -90,7 +96,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void getAccountsForbiddenForNonAdmin() {
         for (String u : noadmin_accounts) {
-            ResponseEntity<String> response = request(u, "/iam/accounts");
+            ResponseEntity<String> response = rest.GET(u, "/iam/accounts");
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
         }
     }
@@ -98,7 +104,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void getAccountsAllowedForAdmins() {
         for (String u : admin_accounts) {
-            ResponseEntity<String> response = request(u, "/iam/accounts");
+            ResponseEntity<String> response = rest.GET(u, "/iam/accounts");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be OK for '%s'".formatted(u));
         }
     }
@@ -108,7 +114,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void getMyAccountWorksForAllAccounts() {
         for (String u : all_accounts) {
-            ResponseEntity<String> response = request(u, "/iam/accounts/" + u);
+            ResponseEntity<String> response = rest.GET(u, "/iam/accounts/" + u);
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should succeed for '%s'".formatted(u));
         }
     }
@@ -117,11 +123,11 @@ class IamRestControllerSecurityTests {
     public void getAnotherAccountWorksOnlyForAdmins() {
         createAccount("target", null);
         for (String u : admin_accounts) {
-            ResponseEntity<String> response = request(u, "/iam/accounts/target");
+            ResponseEntity<String> response = rest.GET(u, "/iam/accounts/target");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
         }
         for (String u : noadmin_accounts) {
-            ResponseEntity<String> response = request(u, "/iam/accounts/target");
+            ResponseEntity<String> response = rest.GET(u, "/iam/accounts/target");
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
         }
         deleteAccount("target");
@@ -130,7 +136,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void getNonExistentAccountForbiddenForNonAdmins() {
         for (String u : noadmin_accounts) {
-            ResponseEntity<String> response = request(u, "/iam/accounts/borkbork");
+            ResponseEntity<String> response = rest.GET(u, "/iam/accounts/borkbork");
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
         }
     }
@@ -138,7 +144,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void getNonExistentAccountNotFoundForAdmins() {
         for (String u : admin_accounts) {
-            ResponseEntity<String> response = request(u, "/iam/accounts/borkbork");
+            ResponseEntity<String> response = rest.GET(u, "/iam/accounts/borkbork");
             assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode(), "Should give not found for '%s'".formatted(u));
         }
     }
@@ -148,7 +154,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void createAccountWorksForAdmins() {
         for (String u : admin_accounts) {
-            ResponseEntity<String> response = postRequest(u, "/iam/accounts", userJson("newuser", "users"));
+            ResponseEntity<String> response = rest.POST(u, "/iam/accounts", userJson("newuser", "users"));
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
             deleteAccount("newuser");
         }
@@ -157,7 +163,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void createAccountForbiddenForNonAdmins() {
         for (String u : noadmin_accounts) {
-            ResponseEntity<String> response = postRequest(u, "/iam/accounts", userJson("newuser", "users"));
+            ResponseEntity<String> response = rest.POST(u, "/iam/accounts", userJson("newuser", "users"));
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN found for '%s'".formatted(u));
         }
     }
@@ -165,7 +171,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void deleteAccountForbiddenForNonAdmins() {
         for (String u : noadmin_accounts) {
-            ResponseEntity<String> response = deleteRequest(u, "/iam/accounts/dummy");
+            ResponseEntity<String> response = rest.DELETE(u, "/iam/accounts/dummy");
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
         }
     }
@@ -174,7 +180,7 @@ class IamRestControllerSecurityTests {
     public void deleteAccountAllowedForAdmin() {
         for (String u : admin_accounts) {
             createAccount("deleteme", null);
-            ResponseEntity<String> response = deleteRequest(u, "/iam/accounts/deleteme");
+            ResponseEntity<String> response = rest.DELETE(u, "/iam/accounts/deleteme");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should give OK for '%s'".formatted(u));
         }
     }
@@ -182,7 +188,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void deleteAccountForbiddenForLoggedOnAdmin() {
         for (String u : admin_accounts) {
-            ResponseEntity<String> response = deleteRequest(u, "/iam/accounts/" + u);
+            ResponseEntity<String> response = rest.DELETE(u, "/iam/accounts/" + u);
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
         }
     }
@@ -190,7 +196,7 @@ class IamRestControllerSecurityTests {
     @Test
     public void getClientAccountsAllowedForMembers() {
         for (String u : client_users) {
-            ResponseEntity<String> response = request(u, "/iam/clients/test");
+            ResponseEntity<String> response = rest.GET(u, "/iam/clients/test");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
         }
     }
@@ -227,33 +233,6 @@ class IamRestControllerSecurityTests {
 
     private void deleteAccount(String id) {
         iamService.deleteAccount(id);
-    }
-    
-    private ResponseEntity<String> exchange(String uid, String url, HttpMethod verb, HttpEntity<String> entity) {
-        return new TestRestTemplate(uid,uid).exchange("http://localhost:" + port + url, verb, entity, String.class);
-    }
-    
-    private ResponseEntity<String> request(String id, String url) {
-        return exchange(id, url, HttpMethod.GET, null);
-    }
-    
-    private ResponseEntity<String> deleteRequest(String id, String url) {
-        return exchange(id, url, HttpMethod.DELETE, null);
-    }
-    
-    private ResponseEntity<String> postRequest(String id, String url, String json) {
-        return exchange(id, url, HttpMethod.POST, makeEntity(json));
-    }
-    
-    private ResponseEntity<String> putRequest(String id, String url, String json) {
-        return exchange(id, url, HttpMethod.PUT, makeEntity(json));
-    }
-    
-    private HttpEntity<String> makeEntity(String json) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-        return new HttpEntity<String>(json, headers);        
     }
 
     private String[] all_accounts =            { "nnn", "nnt", "nan", "nat", "unn", "unt", "uan", "uat" };
