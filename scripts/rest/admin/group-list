@@ -1,0 +1,12 @@
+#!/bin/bash
+
+CONTEXT=/iam/groups
+USAGE="[GID]
+
+  Lists groups or members of single group GID"
+
+. $(realpath $(dirname "$0")/../lib/common.sh)
+
+(($# <= 1)) || usage_exit 1
+
+rest_GET ${1:+/$1}

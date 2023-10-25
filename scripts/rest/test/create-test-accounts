@@ -6,7 +6,7 @@ set -euo pipefail
 create_dummy() {
     ACC="$1"
     shift
-    ../admin/create-account -dv $ACC $ACC $ACC $ACC "$@"
+    ../admin/account-create -dv $ACC $ACC $ACC $ACC "$@"
 }
 
 create_dummy nnn

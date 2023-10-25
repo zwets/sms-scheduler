@@ -1,0 +1,17 @@
+#!/bin/bash
+
+CONTEXT=/iam/groups
+USAGE="GID UID
+
+  Add account UID to group GID
+
+  POSITIONAL PARAMS
+   GID       Unique group ID
+   UID       Unique account ID"
+
+. "$(dirname "$0")/../lib/common.sh"
+
+(($# == 2)) || usage_exit 1
+
+# Parse the standard attributes
+echo "$2" | rest_POST /$1
