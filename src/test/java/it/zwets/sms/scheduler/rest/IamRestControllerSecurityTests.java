@@ -168,6 +168,13 @@ class IamRestControllerSecurityTests {
     }
 
     @Test
+    public void createDuplicateAccountConflict() {
+        ResponseEntity<String> response = rest.POST("nan", "/iam/accounts", userJson("nnn", null));
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        deleteAccount("newuser");
+    }
+
+    @Test
     public void createAccountForbiddenForNonAdmins() {
         for (String u : noadmin_accounts) {
             ResponseEntity<String> response = rest.POST(u, "/iam/accounts", userJson("newuser", "users"));
@@ -183,6 +190,24 @@ class IamRestControllerSecurityTests {
             ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/dummy", userJson("dummy", "users"));
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
         }
+    }
+
+    @Test
+    public void updateAccountOnEmptyEndpoint() {
+        ResponseEntity<String> response = rest.PUT("nan", "/iam/accounts/", userJson("dummy", null));
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    public void updateAccountOnMismatchingEndpoint1() {
+        ResponseEntity<String> response = rest.PUT("nan", "/iam/accounts/dummy", userJson("not-dummy", null));
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    public void updateAccountOnMismatchingEndpoint2() {
+        ResponseEntity<String> response = rest.PUT("nan", "/iam/accounts/not-dummy", userJson("dummy", null));
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
     @Test
@@ -237,6 +262,40 @@ class IamRestControllerSecurityTests {
     public void deleteAccountForbiddenForLoggedOnAdmin() {
         for (String u : admin_accounts) {
             ResponseEntity<String> response = rest.DELETE(u, "/iam/accounts/" + u);
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void deleteNonExistentAccountIsOk() {
+        ResponseEntity<String> response = rest.DELETE("nan", "/iam/accounts/nonexistent");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+        // Password
+
+    @Test
+    public void updatePasswordAllowedForAdmins() {
+        for (String u : admin_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/accounts/dummy/password", u);
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should give OK for '%s'".formatted(u));
+            iamService.checkPassword("dummy", u);
+        }
+    }
+
+    @Test
+    public void updatePasswordAllowedForSelf() {
+        for (String u : all_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/accounts/%s/password".formatted(u), "new-password");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should give OK for '%s'".formatted(u));
+            iamService.checkPassword("dummy", "new-password");
+        }
+    }
+
+    @Test
+    public void updatePasswordNotAllowedForOther() {
+        for (String u : noadmin_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/accounts/dummy/password", "anything");
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
         }
     }
@@ -339,21 +398,21 @@ class IamRestControllerSecurityTests {
     }
 
     @Test
-    public void postNonExistentAccountInUsersIsNotFound() {
+    public void postNonExistentAccountInUsers() {
         ResponseEntity<String> response = rest.POST("nan", "/iam/users", "nonexistent");
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
     @Test
-    public void putNonExistentAccountInUsersIsNotFound() {
+    public void putNonExistentAccountInUsers() {
         ResponseEntity<String> response = rest.PUT("nan", "/iam/users/nonexistent", "");
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
     @Test
-    public void deleteNonExistentAccountInUsersIsNotFound() {
+    public void deleteNonExistentAccountInUsersIsOk() {
         ResponseEntity<String> response = rest.DELETE("nan", "/iam/users/nonexistent");
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
@@ -441,10 +500,13 @@ class IamRestControllerSecurityTests {
     }
     
     private String makeUserJson(String id, String name, String email, String password, String[] groups) {
-        return "{ 'id': '%s', 'name': '%s', 'email': '%s', 'password': '%s', 'groups': [ %s ] }"
+
+        String groupValue = groups == null ? "null" : 
+            "[ " + Arrays.stream(groups).map(s -> "\"%s\"".formatted(s)).collect(Collectors.joining(",")) + " ]";
+
+        return "{ 'id': '%s', 'name': '%s', 'email': '%s', 'password': '%s', 'groups': %s }"
                 .replace('\'', '"')
-                .formatted(id, name, email, password, groups == null ? null :
-                        Arrays.stream(groups).map(s -> "\"%s\"".formatted(s)).collect(Collectors.joining(",")));
+                .formatted(id, name, email, password, groupValue);
     }
     
     private IamService.AccountDetail createAccount(String id, String[] groups) {

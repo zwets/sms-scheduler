@@ -1,5 +1,6 @@
 package it.zwets.sms.scheduler.rest;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
@@ -10,7 +11,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -77,46 +77,60 @@ public class IamRestController {
     @PostMapping(path = "accounts", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('admins')")
     public IamService.AccountDetail postAccount(@RequestBody AccountDetail a) {
-        LOG.debug("REST POST accounts");
-        if (iamService.isAccount(a.id)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Account %s already exists".formatted(a.id));
+        LOG.trace("REST POST accounts");
+
+        if (StringUtils.isBlank(a.id)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account must not be blank");
         }
-        return iamService.createAccount(new IamService.AccountDetail(a.id, a.name, a.email, a.password, a.groups));
+        else if (iamService.isAccount(a.id)) {
+            LOG.warn("REST POST accounts \"a.id\": account already exists.", a.id);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Account exists: %s".formatted(a.id));
+        }
+
+        LOG.debug("REST POST accounts \"{}\": creating account", a.id);
+        return iamService.createAccount(new IamService.AccountDetail(a.id, a.name, a.email, a.password, checkedGroups(a.groups)));
     }
 
     @PutMapping(path = "accounts/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('admins') || authentication.name == #id")
     public IamService.AccountDetail putAccount(@PathVariable String id, @RequestBody AccountDetail a) {
-        LOG.debug("REST PUT accounts/{}", a.id);
+        LOG.trace("REST PUT accounts/{}", id);
         
-        if (StringUtils.isNotBlank(a.id) && !a.id.equals(id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account URL %s does not match enitity: %s".formatted(id, a.id));
+        if (StringUtils.isBlank(id) || !iamService.isAccount(id)) {
+            LOG.warn("REST PUT accounts/{}: non-existing account", id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such account: " + id);
+        } 
+        else if (StringUtils.isNotBlank(a.id) && !id.equals(a.id)) {
+            LOG.warn("REST PUT accounts/{}: mismatching account id: {}", a.id);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resource does not match entity: %s".formatted(a.id));
         }
-        
-        if (iamService.isAccount(id)) {
-	        LOG.debug("REST PUT UPDATE accounts/{}", id);
-	        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
-	                .getAuthorities().stream().map(Object::toString)
-	                .anyMatch(IamService.ADMINS_GROUP::equals);
-	        return iamService.updateAccount(new IamService.AccountDetail(id, a.name, a.email, a.password, 
-	                isAdmin ? a.groups : null));
-        }
-        else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + id);
-        }
+
+        LOG.debug("REST PUT UPDATE accounts/{}", id);
+        return iamService.updateAccount(new IamService.AccountDetail(id,
+                StringUtils.stripToNull(a.name),
+                StringUtils.stripToNull(a.email),
+                StringUtils.stripToNull(a.password),
+                loginHasRole(IamService.ADMINS_GROUP) ? checkedGroups(a.groups) : null));
     }
     
-    @PutMapping(path = "accounts/{id}/password", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(path = "accounts/{id}/password")
     @PreAuthorize("hasRole('admins') || authentication.name == #id")
-    public void updatePassword(@PathVariable String id, @PathVariable String password) {
-        LOG.trace("REST PUT accounts/{}", id);
+    public void updatePassword(@PathVariable String id, @RequestBody String password) {
+        LOG.trace("REST POST accounts/{}/passwords", id);
+
+        if (StringUtils.isBlank(id) || !iamService.isAccount(id)) {
+            LOG.warn("REST POST accounts/{}/password: non-existing account", id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such account: " + id);
+        }
+
+        LOG.debug("REST POST UPDATE accounts/{}/password", id);
         iamService.updatePassword(id, password);
     }
 
     @DeleteMapping(path = "accounts/{id}")
     @PreAuthorize("hasRole('admins') && authentication.name != #id")
     public void deleteAccount(@PathVariable String id) {
-        LOG.trace("REST DELETE accounts/{}", id);
+        LOG.debug("REST DELETE accounts/{}", id);
         iamService.deleteAccount(id);
     }
 
@@ -133,6 +147,10 @@ public class IamRestController {
     @PreAuthorize("hasRole('admins')")
     public void postUser(@RequestBody String id) {
         LOG.trace("REST POST users \"{}\"", id);
+        if (!iamService.isAccount(id)) {
+            LOG.warn("REST PUT users/{}: account {} does not exist", id, id);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such account: %s".formatted(id));
+        }
         iamService.addAccountToGroup(id, IamService.USERS_GROUP);
     }
 
@@ -140,14 +158,11 @@ public class IamRestController {
     @PreAuthorize("hasRole('admins')")
     public void putUser(@PathVariable String id) {
         LOG.trace("REST PUT users/{}", id);
+        if (!iamService.isAccount(id)) {
+            LOG.warn("REST PUT users/{}: account {} does not exist", id, id);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such account: %s".formatted(id));
+        }
         iamService.addAccountToGroup(id, IamService.USERS_GROUP);
-    }
-
-    @DeleteMapping(path = "users/{id}")
-    @PreAuthorize("hasRole('admins')")
-    public void deleteAdmin(@PathVariable String id) {
-        LOG.trace("REST DELETE users/{}", id);
-        iamService.removeAccountFromGroup(id, IamService.USERS_GROUP);
     }
 
     @GetMapping(path = "users/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -156,9 +171,16 @@ public class IamRestController {
         LOG.trace("REST GET users/{}", id);
         IamService.AccountDetail account = iamService.getAccountInGroup(IamService.USERS_GROUP, id);
         if (account == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not found in users: " + id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not found in users: %s".formatted(id));
         }
         return account;
+    }
+
+    @DeleteMapping(path = "users/{id}")
+    @PreAuthorize("hasRole('admins')")
+    public void deleteUser(@PathVariable String id) {
+        LOG.trace("REST DELETE users/{}", id);
+        iamService.removeAccountFromGroup(id, IamService.USERS_GROUP);
     }
 
         // Role: Admins
@@ -166,7 +188,7 @@ public class IamRestController {
     @GetMapping(path = "admins", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('admins')")
     public IamService.AccountDetail[] getAdmins() {
-        LOG.trace("REST GET users");
+        LOG.trace("REST GET admins");
         return iamService.getAccountsInGroup(IamService.ADMINS_GROUP);
     }
     
@@ -174,6 +196,10 @@ public class IamRestController {
     @PreAuthorize("hasRole('admins')")
     public void postAdmin(@RequestBody String id) {
         LOG.trace("REST POST admins \"{}\"", id);
+        if (!iamService.isAccount(id)) {
+            LOG.warn("REST POST admins \"{}\": account does not exist");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such account: %s".formatted(id));
+        }
         iamService.addAccountToGroup(id, IamService.ADMINS_GROUP);
     }
 
@@ -181,6 +207,10 @@ public class IamRestController {
     @PreAuthorize("hasRole('admins')")
     public void putAdmin(@PathVariable String id) {
         LOG.trace("REST PUT admins/{}", id);
+        if (!iamService.isAccount(id)) {
+            LOG.warn("REST PUT admins/{}: account does not exist");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such account: %s".formatted(id));
+        }
         iamService.addAccountToGroup(id, IamService.ADMINS_GROUP);
     }
 
@@ -190,9 +220,16 @@ public class IamRestController {
         LOG.trace("REST GET admins/{}", id);
         IamService.AccountDetail account = iamService.getAccountInGroup(IamService.ADMINS_GROUP, id);
         if (account == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not found in admins: " + id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not found in admins: %s".formatted(id));
         }
         return account;
+    }
+
+    @DeleteMapping(path = "admins/{id}")
+    @PreAuthorize("hasRole('admins' && authentication.name != #id)")
+    public void deleteAdmin(@PathVariable String id) {
+        LOG.debug("REST DELETE admins/{}", id);
+        iamService.removeAccountFromGroup(id, IamService.ADMINS_GROUP);
     }
 
         // Clients
@@ -210,16 +247,46 @@ public class IamRestController {
         LOG.trace("REST GET clients/{}", gid);
         IamService.GroupDetail client = iamService.getGroup(Flavour.CLIENT, gid);
         if (client == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Client not found: " + gid);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Client not found: %s".formatted(gid));
         }
         return client;
     }
     
-    @DeleteMapping(path = "groups/{gid}")
-    @PreAuthorize("hasRole('admins') && #gid != 'admins' && #gid != 'users'")
-    public void deleteGroup(@PathVariable String gid) {
-        LOG.trace("REST DELETE groups/{}", gid);
-        iamService.deleteGroup(gid);
+    @DeleteMapping(path = "clients/{cid}")
+    @PreAuthorize("hasRole('admins')")
+    public void deleteClient(@PathVariable String cid) {
+        LOG.trace("REST DELETE groups/{}", cid);
+        iamService.deleteGroup(cid);
+    }
+
+        // Helpers
+
+    private static Object[] stripToNull(Object[] list) {
+        return list == null || list.length == 0 ? null : list;
+    }
+    
+    private String[] checkedAccounts(String[] ids) {
+        if (ids != null && Arrays.stream(ids).anyMatch(g -> !iamService.isAccount(g))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid account ID in list");
+        }
+        return ids;
+    }
+   
+    private String[] checkedGroups(String[] ids) {
+        if (ids != null && Arrays.stream(ids).anyMatch(g -> !iamService.isGroup(g))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "non-existent group in list");
+        }
+        return ids;
+    }
+
+    private boolean loginHasRole(String role) {
+        return loginHasAuthority("ROLE_" + role);
+    }
+    
+    private boolean loginHasAuthority(String authority) {
+        return SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().stream().map(Object::toString)
+                .anyMatch(authority::equals);
     }
 
     /**
@@ -279,5 +346,6 @@ public class IamRestController {
         buf.append("\nBye now.\n");
         return buf.toString();
     }
-
 }
+
+// vim: sts=4:sw=4:et:ai:si

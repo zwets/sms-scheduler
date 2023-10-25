@@ -25,12 +25,12 @@ public class RestTestHelper {
         return exchange(id, url, HttpMethod.DELETE, null);
     }
     
-    public ResponseEntity<String> POST(String id, String url, String json) {
-        return exchange(id, url, HttpMethod.POST, makeEntity(json));
+    public ResponseEntity<String> POST(String id, String url, String body) {
+        return exchange(id, url, HttpMethod.POST, makeEntity(body));
     }
     
-    public ResponseEntity<String> PUT(String id, String url, String json) {
-        return exchange(id, url, HttpMethod.PUT, makeEntity(json));
+    public ResponseEntity<String> PUT(String id, String url, String body) {
+        return exchange(id, url, HttpMethod.PUT, makeEntity(body));
     }
     
     public ResponseEntity<String> exchange(String uid, String url, HttpMethod verb, HttpEntity<String> entity) {
@@ -40,7 +40,7 @@ public class RestTestHelper {
     private HttpEntity<String> makeEntity(String json) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN));
         return new HttpEntity<String>(json, headers);        
     }
 }
