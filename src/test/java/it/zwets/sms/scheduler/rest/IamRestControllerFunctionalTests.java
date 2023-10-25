@@ -93,17 +93,6 @@ class IamRestControllerFunctionalTests {
         assertEquals(2, root.get("groups").size());
     }
     
-    @Test
-    public void createAccountWithPut() {
-        ResponseEntity<String> response = rest.PUT("root", "/iam/accounts/bork2", userJson("bork2", "users"));
-        LOG.info("PUT response: {}", response.getBody());
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        
-        JsonNode root = asJson(response);
-        assertEquals("bork2", root.get("id").textValue());
-        assertEquals(1, root.get("groups").size());
-    }
-    
         // Helpers
     
     private JsonNode asJson(ResponseEntity<String> response) {

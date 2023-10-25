@@ -1,6 +1,7 @@
 package it.zwets.sms.scheduler.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -24,10 +27,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.zwets.sms.scheduler.iam.IamService;
+import it.zwets.sms.scheduler.iam.IamService.AccountDetail;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @TestInstance(Lifecycle.PER_CLASS)
 class IamRestControllerSecurityTests {
+
+    private static final Logger LOG = LoggerFactory.getLogger(IamRestControllerSecurityTests.class);
 
     @LocalServerPort
     private int port;
@@ -66,6 +72,7 @@ class IamRestControllerSecurityTests {
         deleteAccount("uan");
         deleteAccount("uat");
         deleteAccount("uat");
+        deleteAccount("dummy");
     }
 
         // General /iam tests
@@ -91,7 +98,7 @@ class IamRestControllerSecurityTests {
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
     
-        // Tests on /iam/accounts
+        // Tests on /accounts
     
     @Test
     public void getAccountsForbiddenForNonAdmin() {
@@ -168,6 +175,47 @@ class IamRestControllerSecurityTests {
         }
     }
 
+        // Update Account
+    
+    @Test
+    public void updateAccountWorksForAdmins() {
+        for (String u : admin_accounts) {
+            ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/dummy", userJson("dummy", "users"));
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void updateAccountWorksForSelf() {
+        String u = "nnn";
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/%s".formatted(u), makeUserJson(u, "New Name", "new@example.com", null, null));
+        assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
+        
+        AccountDetail account = deserializeAccount(response);
+        assertEquals(u, account.id());
+        assertEquals("New Name", account.name());
+        assertEquals("new@example.com", account.email());
+        assertNull(account.password());
+        assertEquals(0, account.groups().length);
+    }
+    
+    @Test
+    public void updateAccountForSelfCannotChangeGroups() {
+        String u = "unt";
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/%s".formatted(u), makeUserJson(u, "New Name", "new@example.com", null, 
+                new String[] { "admins", "users", "test" }));
+        assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
+        
+        AccountDetail account = deserializeAccount(response);
+        assertEquals(u, account.id());
+        assertEquals("New Name", account.name());
+        assertEquals("new@example.com", account.email());
+        assertNull(account.password());
+        assertEquals(2, account.groups().length);
+    }
+
+        // Delete Account
+    
     @Test
     public void deleteAccountForbiddenForNonAdmins() {
         for (String u : noadmin_accounts) {
@@ -192,12 +240,167 @@ class IamRestControllerSecurityTests {
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
         }
     }
+
+        // Roles (User, Admin) Methods
+
+    @Test
+    public void getRolesAllowedForAdmins() {
+        for (String u : admin_accounts) {
+            for (String r : new String[]{ "users", "admins" }) {
+                ResponseEntity<String> response = rest.GET(u, "/iam/" + r);
+                assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            }
+        }
+    }
+
+    @Test
+    public void getRolesForbiddenForNonAdmins() {
+        for (String u : noadmin_accounts) {
+            for (String r : new String[]{ "users", "admins" }) {
+                ResponseEntity<String> response = rest.GET(u, "/iam/" + r);
+                assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
+            }
+        }
+    }
+
+        // Users Members
+
+    @Test
+    public void getUsersAccountAllowedForAdmins() {
+        for (String a : admin_accounts) {
+            for (String u : user_accounts) {
+                ResponseEntity<String> response = rest.GET(a, "/iam/users/" + u);
+                assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(a));
+            }
+            for (String u : nouser_accounts) {
+                ResponseEntity<String> response = rest.GET(a, "/iam/users/" + u);
+                assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode(), "Should be not found for '%s'".formatted(a));
+            }
+        }
+    }
+
+    @Test
+    public void getUsersAccountAllowedForSelf() {
+        for (String u : user_noadmin_accounts) {
+            ResponseEntity<String> response = rest.GET(u, "/iam/users/" + u);
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be OK for '%s'".formatted(u));
+        }
+    }
+    
+    @Test
+    public void getUsersAccountForbiddenForNonSelf() {
+        for (String u : user_noadmin_accounts) {
+            for (String o : all_accounts) {
+                if (!u.equals(o)) {
+                    ResponseEntity<String> response = rest.GET(u, "/iam/users/" + o);
+                    assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be OK for '%s'".formatted(u));
+                }
+            }
+        }
+    }
+   
+    @Test void postAndDeleteAccountInUsersAllowedForAdmins() {
+        for (String u : admin_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/users", "nnn");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            response = rest.GET(u, "/iam/users/nnn");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            response = rest.DELETE(u, "/iam/users/nnn");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void putAndDeleteAccountInUsersAllowedForAdmins() {
+        for (String u : admin_accounts) {
+            ResponseEntity<String> response = rest.PUT(u, "/iam/users/nnn", "");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            response = rest.GET(u, "/iam/users/nnn");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            response = rest.DELETE(u, "/iam/users/nnn");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void postAccountInUsersForbiddenForNonAdmins() {
+        for (String u : noadmin_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/users", "nnn");
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be FORBIDDEN for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void putAccountInUsersForbiddenForNonAdmins() {
+        for (String u : noadmin_accounts) {
+            ResponseEntity<String> response = rest.PUT(u, "/iam/users/nnn","");
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be FORBIDDEN for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void postNonExistentAccountInUsersIsNotFound() {
+        ResponseEntity<String> response = rest.POST("nan", "/iam/users", "nonexistent");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    public void putNonExistentAccountInUsersIsNotFound() {
+        ResponseEntity<String> response = rest.PUT("nan", "/iam/users/nonexistent", "");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    public void deleteNonExistentAccountInUsersIsNotFound() {
+        ResponseEntity<String> response = rest.DELETE("nan", "/iam/users/nonexistent");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    public void duplicatePutAccountInUsersIsOK() {
+        ResponseEntity<String> response = rest.PUT("nan", "/iam/users/unn", "");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+        // Admins Members
+
+    @Test
+    public void getAdminsAccountAllowedForAdmins() {
+        for (String u : admin_accounts) {
+            for (String a : admin_accounts) {
+                ResponseEntity<String> response = rest.GET(u, "/iam/admins/" + a);
+                assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            }
+            for (String a : noadmin_accounts) {
+                ResponseEntity<String> response = rest.GET(u, "/iam/admins/" + a);
+                assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode(), "Should be not found for '%s'".formatted(u));
+            }
+        }
+    }
+
+    @Test
+    public void getAdminsAccountAllowedForSelf() {
+        for (String u : admin_accounts) {
+            ResponseEntity<String> response = rest.GET(u, "/iam/admins/" + u);
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be OK for '%s'".formatted(u));
+        }
+    }
+    
+        // Clients Methods
     
     @Test
     public void getClientAccountsAllowedForMembers() {
         for (String u : client_users) {
             ResponseEntity<String> response = rest.GET(u, "/iam/clients/test");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void getClientAccountsForbiddenForNonMembers() {
+        for (String u : noclient_noadm_accounts) {
+            ResponseEntity<String> response = rest.GET(u, "/iam/clients/test");
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
         }
     }
 
@@ -216,6 +419,23 @@ class IamRestControllerSecurityTests {
         }
     }
     
+    private AccountDetail deserializeAccount(ResponseEntity<String> entity) {
+        
+        JsonNode root = asJson(entity);
+        String id = root.get("id").asText(null);
+        String name = root.get("name").asText(null);
+        String email = root.get("email").asText(null);
+        String password = root.get("password").asText(null);
+        
+        JsonNode gnode = root.get("groups");
+        String[] groups = gnode.isNull() ? null : new String[gnode.size()];
+        for (int i = 0; i < gnode.size(); ++i) {
+            groups[i] = gnode.get(i).asText(null);
+        }
+        
+        return new AccountDetail(id, name, email, password, groups);
+    }
+    
     private String userJson(String name, String... groups) {
         return makeUserJson(name, name, name, name, groups);
     }
@@ -223,7 +443,7 @@ class IamRestControllerSecurityTests {
     private String makeUserJson(String id, String name, String email, String password, String[] groups) {
         return "{ 'id': '%s', 'name': '%s', 'email': '%s', 'password': '%s', 'groups': [ %s ] }"
                 .replace('\'', '"')
-                .formatted(id, name, email, password, 
+                .formatted(id, name, email, password, groups == null ? null :
                         Arrays.stream(groups).map(s -> "\"%s\"".formatted(s)).collect(Collectors.joining(",")));
     }
     
@@ -237,6 +457,8 @@ class IamRestControllerSecurityTests {
 
     private String[] all_accounts =            { "nnn", "nnt", "nan", "nat", "unn", "unt", "uan", "uat" };
     private String[] nouser_noadmin_accounts = { "nnn", "nnt" };
+    private String[] noclient_noadm_accounts = { "nnn",                      "unn",                     };
+    private String[] user_noadmin_accounts   = {                             "unn", "unt"               };
     private String[] user_or_admin_accounts =  {               "nan", "nat", "unn", "unt", "uan", "uat" };
     private String[] user_accounts =    { "unn", "unt", "uan", "uat" };
     private String[] nouser_accounts =  { "nnn", "nnt", "nan", "nat" };
@@ -245,3 +467,5 @@ class IamRestControllerSecurityTests {
     private String[] client_users =     { "unt", "uat" };
     private String[] noclient_acounts = { "nnn", "nan", "unn", "uan" };
 }
+
+// vim: sts=4:sw=4:et:ai:si

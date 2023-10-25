@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ class IamServiceTests {
     
     @Test
     void adminUserPresent() {
-        assertTrue(svc.isValidAccount(IamService.INITIAL_ADMIN));
+        assertTrue(svc.isAccount(IamService.INITIAL_ADMIN));
     }
 
     @Test
@@ -120,7 +121,48 @@ class IamServiceTests {
         assertNull(svc.getAccount(id));
     }
     
- 
+    @Test
+    void testCreateDuplicateAccount() {
+        final String id = "newid5";
+        
+        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", "", null);
+        svc.createAccount(account);
+        assertThrows(IllegalStateException.class, () -> svc.createAccount(account));
+    }
+
+    @Test
+    void testUpdateAccount() {
+        final String id = "newid6";
+        
+        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", "", null);
+        svc.createAccount(account);
+        
+        AccountDetail newdata = new AccountDetail(id, "Updated Account", null, null, null);
+        svc.updateAccount(newdata);
+        
+        account = svc.getAccount(id);
+        assertEquals(newdata.name(), account.name());
+    }
+   
+    @Test
+    void testUpdateGroups() {
+        String[] oldgroups = { IamService.ADMINS_GROUP, IamService.TEST_GROUP };
+        String[] newgroups = { IamService.TEST_GROUP, IamService.USERS_GROUP };
+        
+        final String id = "newid7";
+        
+        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", "", oldgroups);
+        svc.createAccount(account);
+        
+        AccountDetail newdata = new AccountDetail(id, null, null, null, newgroups);
+        svc.updateAccount(newdata);
+        
+        account = svc.getAccount(id);
+        assertEquals(2, account.groups().length);
+        assertEquals(IamService.TEST_GROUP, account.groups()[0]);
+        assertEquals(IamService.USERS_GROUP, account.groups()[1]);
+    }
+    
     @Test
     void adminUserInAdmins() {
         assertTrue(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.ADMINS_GROUP));
@@ -134,6 +176,20 @@ class IamServiceTests {
     @Test
     void adminUserInTest() {
         assertTrue(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.TEST_GROUP));
+    }
+    
+    @Test
+    void getUserInGroup() {
+        assertNotNull(svc.getAccountInGroup(IamService.TEST_GROUP, IamService.INITIAL_ADMIN));
+    }
+    
+    @Test
+    void getUserNotInGroup() {
+	String id = "user-not-in-admins";
+        AccountDetail account = new AccountDetail(id, "New Account", "email@example.com", "", null);
+        svc.createAccount(account);
+        assertNull(svc.getAccountInGroup(IamService.ADMINS_GROUP, id));
+        svc.deleteAccount(id);
     }
     
     @Test

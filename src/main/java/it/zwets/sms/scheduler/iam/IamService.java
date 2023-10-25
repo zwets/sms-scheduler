@@ -1,8 +1,10 @@
 package it.zwets.sms.scheduler.iam;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.flowable.idm.api.Group;
 import org.flowable.idm.api.IdmIdentityService;
 import org.flowable.idm.api.Privilege;
@@ -121,53 +123,42 @@ public class IamService {
     }
 
     /**
-     * Create an account, no action if an account by this ID already exists.
-     * @param details the id, name, email and optional groups to add the account to
-     * @param password the password to set on the account
-     * @return the Account found or created
-     * @throws RuntimeException from back-end if name (or email?) is not unique
+     * Create an account
+     * @param details the id, name, email, password and optional groups to add the account to
+     * @return the created account
+     * @throws IllegalStateException if the account existed
      */
     public AccountDetail createAccount(final AccountDetail detail) {
         LOG.trace("create account: {}", detail.id);
 
-        AccountDetail account = getAccount(detail.id);
-
-        if (account == null) {
-
-            account = new AccountDetail(
-                    detail.id,
-                    detail.name,
-                    detail.email,
-                    detail.password,
-                    detail.groups == null ? new String[0] : Arrays.copyOf(detail.groups, detail.groups.length));
-
-            LOG.info("creating account: {}", account.id);
-            User user = identityService.newUser(account.id);
-            user.setDisplayName(account.name);
-            user.setEmail(account.email);
-            user.setPassword(account.password);
-            identityService.saveUser(user);
-
-            for (String groupId : account.groups) {
-                addAccountToGroup(account.id, groupId);
-            }
+        String[] groups = detail.groups == null ? new String[0] : detail.groups;
+        
+        if (StringUtils.isBlank(detail.id)) {
+            throw new IllegalArgumentException("Account ID must not be blank");
+        }
+        
+        if (isAccount(detail.id)) {
+            throw new IllegalStateException("Account exists: %s".formatted(detail.id));
         }
 
-        return account;
-    }
-
-    public AccountDetail updateAccount(final AccountDetail detail) {
-        LOG.trace("update account: {}", detail.id);
-        throw new NotImplementedException();
-    }
+        Optional<String> nonGroup = Arrays.stream(groups).filter(gid -> !isGroup(gid)).findAny();
+        if (nonGroup.isPresent()) {
+            throw new IllegalArgumentException("No such group: %s".formatted(nonGroup.get()));
+        }
     
-    /**
-     * Delete account, ignored if it does not exist.
-     * @param id
-     */
-    public void deleteAccount(String id) {
-        LOG.info("delete account: {}", id);
-        identityService.deleteUser(id);
+        LOG.info("creating account: {}", detail.id);
+        
+        User user = identityService.newUser(detail.id);
+        user.setDisplayName(detail.name);
+        user.setEmail(detail.email);
+        user.setPassword(detail.password);
+        identityService.saveUser(user);
+
+        for (String gid : groups) {
+            addAccountToGroup(detail.id, gid);
+        }
+            
+        return getAccount(detail.id);
     }
 
     /**
@@ -175,16 +166,16 @@ public class IamService {
      * @param id
      * @return
      */
-    public boolean isValidAccount(String id) {
+    public boolean isAccount(String id) {
         boolean result = identityService.createUserQuery().userId(id).count() != 0;
-        LOG.trace("isValidAccount({}) -> {}", id, result);
+        LOG.trace("isAccount({}) -> {}", id, result);
         return result;
     }
-
+    
     /**
      * Return account details for id, or null if not found.
      * @param id the account Id to look up
-     * @return
+     * @return the account details (except password)
      */
     public AccountDetail getAccount(String id) {
         LOG.trace("get account: {}", id);
@@ -197,6 +188,72 @@ public class IamService {
         }
 
         return account;
+    }
+
+    /**
+     * Update account with the non-null fields from update
+     * @param update
+     * @return the update account
+     */
+    public AccountDetail updateAccount(final AccountDetail update) {
+        LOG.trace("update account: {}", update.id);
+
+        String id = update.id;
+        User user = identityService.createUserQuery().userId(id).singleResult();
+        
+        if (user == null) {
+            throw new IllegalArgumentException("No such account: %s".formatted(update.id));
+        }
+        
+        LOG.info("updating account: {}", id);
+
+            // Regular fields
+        
+        if (update.name != null) {
+            user.setDisplayName(update.name);
+        }
+        if (update.email != null) {
+            user.setEmail(update.email);
+        }
+        if (update.name != null || update.email != null) {
+            identityService.saveUser(user);
+        }
+
+            // Password needs specific call
+        
+        if (update.password != null) {
+            updatePassword(id, update.password);
+        }
+        
+            // Group list: update with the difference
+        
+        if (update.groups != null) {
+            
+            List<String> oldGroups = Arrays.asList(groupList(id));
+            List<String> newGroups = Arrays.asList(update.groups);
+            
+            for (String g : oldGroups) {
+                if (!newGroups.contains(g)) {
+                    removeAccountFromGroup(update.id, g);
+                }
+            }
+            for (String g : newGroups) {
+                if (!oldGroups.contains(g)) {
+                    addAccountToGroup(id, g);
+                }
+            }
+        }
+            
+        return getAccount(id);
+    }
+    
+    /**
+     * Delete account, ignored if it does not exist.
+     * @param id
+     */
+    public void deleteAccount(String id) {
+        LOG.info("delete account: {}", id);
+        identityService.deleteUser(id);
     }
 
     /**
@@ -241,6 +298,26 @@ public class IamService {
                 .count() != 0;
         LOG.trace("isAccountInGroup({},{}) -> {}", accountId, groupId, result);
         return result;
+    }
+
+    /**
+     * Retrieve an Account in Group, or null if it is not a member
+     * Note the account.groups fields will be set to null.
+     * @param groupId
+     * @param accountId
+     * @return array of accounts, with the groups null-ed out
+     */
+    public AccountDetail getAccountInGroup(String groupId, String accountId) {
+        LOG.trace("retrieve account in group {}: {}", groupId, accountId);
+
+        AccountDetail account = null;
+
+        User u = identityService.createUserQuery().memberOfGroup(groupId).userId(accountId).singleResult();
+        if (u != null) {
+            account = new AccountDetail(u.getId(), u.getDisplayName(), u.getEmail(), null, groupList(u.getId()));
+        }
+
+        return account;
     }
 
     /**
@@ -296,51 +373,54 @@ public class IamService {
     }
     
     /**
-     * Create a new group or return existing group.
-     * @param groupId name of the group
+     * Create a new group
      * @param flavour the authority flavour (role, client)
-     * @return the GroupDetail, with group list
+     * @param groupId name of the group
+     * @return the GroupDetail, with (obviously empty) member list
+     * @throws IllegalArgumentException if group exists
      */
     public GroupDetail createGroup(Flavour flavour, String groupId) {
-        LOG.debug("creating group {} with authority {}_{}", groupId, flavour, groupId);
+        LOG.trace("create group {} with authority {}_{}", groupId, flavour, groupId);
 
-        GroupDetail group = getGroup(groupId);
-        if (group == null) {
-
-            Group flwGroup = identityService.newGroup(groupId);
-            flwGroup.setId(groupId);
-            flwGroup.setType(flavour.toString());
-            identityService.saveGroup(flwGroup);
-
-            group = new GroupDetail(groupId, flavour.toString(), new String[0]);
-
-	        String privName = "%s_%s".formatted(flavour, groupId);
-	        Privilege priv = identityService.createPrivilege(privName);
-	
-	        LOG.debug("assigning privilege {} to group {}", privName, groupId);
-	        identityService.addGroupPrivilegeMapping(priv.getId(), groupId);
+        if (StringUtils.isBlank(groupId)) {
+            throw new IllegalArgumentException("Group ID must not be blank");
         }
-        else if (!(group.type.equals(flavour.toString()))) {
-            throw new RuntimeException("cannot create %s group %s: %s group with that ID exists"
-                    .formatted(flavour, groupId, group.type));
+        
+        if (isGroup(groupId)) {
+            throw new IllegalArgumentException("Group already exists: %s".formatted(groupId));
         }
 
-        return group;
+        LOG.info("creating {} group {}", flavour, groupId);
+        
+        Group flwGroup = identityService.newGroup(groupId);
+        flwGroup.setId(groupId);
+        flwGroup.setType(flavour.toString());
+        identityService.saveGroup(flwGroup);
+
+        String privName = "%s_%s".formatted(flavour, groupId);
+        Privilege priv = identityService.createPrivilege(privName);
+
+        LOG.debug("assigning privilege {} to group {}", privName, groupId);
+        identityService.addGroupPrivilegeMapping(priv.getId(), groupId);
+
+        return getGroup(flavour, groupId);
     }
 
     /**
-     * Delete the group with groupId.  No-op if group does not exist.
-     * @param groupId
-     */
-    public void deleteGroup(String groupId) {
-        LOG.debug("delete group {}", groupId);
-        identityService.deleteGroup(groupId);
-    }
-
-    /**
-     * Retrieve details of group (of any type)
+     * Check for existing group
      * @param id
-     * @return the group details
+     * @return true iff group id exists
+     */
+    public boolean isGroup(String id) {
+        boolean result = identityService.createGroupQuery().groupId(id).count() != 0;
+        LOG.trace("isGroup({}) -> {}", id, result);
+        return result;
+    }
+    
+    /**
+     * Retrieve details of group
+     * @param id
+     * @return the group details and member list 
      */
     public GroupDetail getGroup(String id) {
         LOG.trace("retrieve group: {}", id);
@@ -357,8 +437,8 @@ public class IamService {
 
     /**
      * Retrieve group with id and optional flavour
-     * @param flavour the group type to filter on
      * @param id the group Id
+     * @param flavour the group type to filter on
      * @return the group details
      */
     public GroupDetail getGroup(Flavour flavour, String id) {
@@ -391,6 +471,15 @@ public class IamService {
                 .orderByGroupId().asc().list().stream()
                 .map(g -> new GroupDetail(g.getId(), g.getType(), memberList(g.getId())))
                 .toArray(GroupDetail[]::new);
+    }
+
+    /**
+     * Delete the group with groupId.  No-op if group does not exist.
+     * @param groupId
+     */
+    public void deleteGroup(String groupId) {
+        LOG.debug("delete group {}", groupId);
+        identityService.deleteGroup(groupId);
     }
 
     /* Helper to return the group list for an account. */
