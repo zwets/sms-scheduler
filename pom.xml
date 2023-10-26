@@ -22,8 +22,6 @@
       <dependency>
          <groupId>org.flowable</groupId>
          <artifactId>flowable-spring-boot-starter-process</artifactId>
-         <!-- artifactId>flowable-spring-boot-starter-process-rest</artifactId -->
-         <!-- artifactId>flowable-spring-boot-starter-rest</artifactId -->
          <version>${flowable.version}</version>
       </dependency>
       <dependency>

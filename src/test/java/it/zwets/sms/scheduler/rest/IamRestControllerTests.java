@@ -30,13 +30,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.zwets.sms.scheduler.iam.IamService;
 import it.zwets.sms.scheduler.iam.IamService.AccountDetail;
+import it.zwets.sms.scheduler.iam.IamService.Flavour;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @TestInstance(Lifecycle.PER_CLASS)
 class IamRestControllerTests {
 
     private static final Logger LOG = LoggerFactory.getLogger(IamRestControllerTests.class);
-    private static final String PASSWORD_PREFIX = "password_";
 
     @LocalServerPort
     private int port;
@@ -48,34 +48,34 @@ class IamRestControllerTests {
     
     @BeforeAll
     public void beforeAll() {
-        rest = new RestTestHelper("http://localhost", port, PASSWORD_PREFIX);
+        rest = new RestTestHelper(iamService, "http://localhost", port);
     }
     
     @BeforeEach
     public void setup() {
-        createAccount("nnn", new String[] { });
-        createAccount("nnt", new String[] { IamService.TEST_GROUP });
-        createAccount("nan", new String[] { IamService.ADMINS_GROUP });
-        createAccount("nat", new String[] { IamService.ADMINS_GROUP, IamService.TEST_GROUP });
-        createAccount("unn", new String[] { IamService.USERS_GROUP });
-        createAccount("unt", new String[] { IamService.USERS_GROUP, IamService.TEST_GROUP });
-        createAccount("uan", new String[] { IamService.USERS_GROUP, IamService.ADMINS_GROUP });
-        createAccount("uat", new String[] { IamService.USERS_GROUP, IamService.ADMINS_GROUP, IamService.TEST_GROUP });
-        createAccount("dummy", new String[] { });
+        rest.createAccount("nnn", new String[] { });
+        rest.createAccount("nnt", new String[] { IamService.TEST_GROUP });
+        rest.createAccount("nan", new String[] { IamService.ADMINS_GROUP });
+        rest.createAccount("nat", new String[] { IamService.ADMINS_GROUP, IamService.TEST_GROUP });
+        rest.createAccount("unn", new String[] { IamService.USERS_GROUP });
+        rest.createAccount("unt", new String[] { IamService.USERS_GROUP, IamService.TEST_GROUP });
+        rest.createAccount("uan", new String[] { IamService.USERS_GROUP, IamService.ADMINS_GROUP });
+        rest.createAccount("uat", new String[] { IamService.USERS_GROUP, IamService.ADMINS_GROUP, IamService.TEST_GROUP });
+        rest.createAccount("dummy", new String[] { });
     }
     
     @AfterEach
     public void teardown() {
-        deleteAccount("nnn");
-        deleteAccount("nnt");
-        deleteAccount("nan");
-        deleteAccount("nat");
-        deleteAccount("unn");
-        deleteAccount("unt");
-        deleteAccount("uan");
-        deleteAccount("uat");
-        deleteAccount("uat");
-        deleteAccount("dummy");
+        rest.deleteAccount("nnn");
+        rest.deleteAccount("nnt");
+        rest.deleteAccount("nan");
+        rest.deleteAccount("nat");
+        rest.deleteAccount("unn");
+        rest.deleteAccount("unt");
+        rest.deleteAccount("uan");
+        rest.deleteAccount("uat");
+        rest.deleteAccount("uat");
+        rest.deleteAccount("dummy");
     }
 
         // General /iam tests
@@ -131,22 +131,22 @@ class IamRestControllerTests {
 
     @Test
     public void getAccountWorksForAdmins() {
-        createAccount("getAccountWorksForAdmins", null);
+        rest.createAccount("getAccountWorksForAdmins", null);
         for (String u : admin_accounts) {
             ResponseEntity<String> response = rest.GET(u, "/iam/accounts/getAccountWorksForAdmins");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
         }
-        deleteAccount("getAccountWorksForAdmins");
+        rest.deleteAccount("getAccountWorksForAdmins");
     }
 
     @Test
     public void getAccountForbiddenForNonSelfNonAdmin() {
-        createAccount("getAccountForbiddenForNonSelfNonAdmin", null);
+        rest.createAccount("getAccountForbiddenForNonSelfNonAdmin", null);
         for (String u : noadmin_accounts) {
             ResponseEntity<String> response = rest.GET(u, "/iam/accounts/target");
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
         }
-        deleteAccount("getAccountForbiddenForNonSelfNonAdmin");
+        rest.deleteAccount("getAccountForbiddenForNonSelfNonAdmin");
     }
     
     @Test
@@ -172,7 +172,9 @@ class IamRestControllerTests {
         for (String u : admin_accounts) {
             ResponseEntity<String> response = rest.POST(u, "/iam/accounts", simpleUserJson("createAccountWorksForAdmins", "users"));
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
-            deleteAccount("createAccountWorksForAdmins");
+            assertTrue(iamService.isAccount("createAccountWorksForAdmins"));
+            assertTrue(iamService.isAccountInGroup("createAccountWorksForAdmins", "users"));
+            rest.deleteAccount("createAccountWorksForAdmins");
         }
     }
 
@@ -210,6 +212,7 @@ class IamRestControllerTests {
         for (String u : admin_accounts) {
             ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/dummy", simpleUserJson("dummy", "users"));
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
+            assertTrue(iamService.isAccountInGroup("dummy", "users"));
         }
     }
 
@@ -246,7 +249,7 @@ class IamRestControllerTests {
         assertEquals(u + "@example.com", account.email());
         assertNull(account.password());
         assertEquals(1, account.groups().length); // nnt has one group
-        assertTrue(iamService.checkPassword(u, "password_" + u));
+        assertTrue(iamService.checkPassword(u, rest.getPassword(u)));
     }
 
     @Test
@@ -261,7 +264,7 @@ class IamRestControllerTests {
         assertEquals(u + "@example.com", account.email());
         assertNull(account.password());
         assertEquals(1, account.groups().length); // nnt has one group
-        assertTrue(iamService.checkPassword(u, "password_" + u));
+        assertTrue(iamService.checkPassword(u, rest.getPassword(u)));
     }
 
     @Test
@@ -276,7 +279,7 @@ class IamRestControllerTests {
         assertEquals(u + "@example.com", account.email());
         assertNull(account.password());
         assertEquals(2, account.groups().length); // nat has two
-        assertTrue(iamService.checkPassword(u, "password_" + u));
+        assertTrue(iamService.checkPassword(u, rest.getPassword(u)));
     }
 
     @Test
@@ -359,9 +362,10 @@ class IamRestControllerTests {
     @Test
     public void deleteAccountAllowedForAdmin() {
         for (String u : admin_accounts) {
-            createAccount("deleteme", null);
+            rest.createAccount("deleteme", null);
             ResponseEntity<String> response = rest.DELETE(u, "/iam/accounts/deleteme");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should give OK for '%s'".formatted(u));
+            assertFalse(iamService.isAccount("deleteme"));
         }
     }
     
@@ -480,10 +484,12 @@ class IamRestControllerTests {
         for (String u : admin_accounts) {
             ResponseEntity<String> response = rest.POST(u, "/iam/roles/users", "nnn");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            assertTrue(iamService.isAccountInGroup("nnn", "users"));
             response = rest.GET(u, "/iam/roles/users/nnn");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
             response = rest.DELETE(u, "/iam/roles/users/nnn");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            assertFalse(iamService.isAccountInGroup("nnn", "users"));
         }
     }
 
@@ -537,6 +543,61 @@ class IamRestControllerTests {
         }
     }
     
+        // Group Admins Members
+
+    @Test
+    public void getAdminAccountAllowedForAdmins() {
+        for (String a : admin_accounts) {
+            for (String u : admin_accounts) {
+                ResponseEntity<String> response = rest.GET(a, "/iam/roles/admins/" + u);
+                assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(a));
+            }
+            for (String u : noadmin_accounts) {
+                ResponseEntity<String> response = rest.GET(a, "/iam/roles/admins/" + u);
+                assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode(), "Should be not found for '%s'".formatted(a));
+            }
+        }
+    }
+
+    @Test void postAndDeleteAccountInAdminsAllowedForAdmins() {
+        for (String u : admin_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/roles/admins", "nnn");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            assertTrue(iamService.isAccountInGroup("nnn", "admins"));
+            response = rest.GET(u, "/iam/roles/admins/nnn");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            response = rest.DELETE(u, "/iam/roles/admins/nnn");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            assertFalse(iamService.isAccountInGroup("nnn", "admins"));
+        }
+    }
+
+    @Test
+    public void postAccountInAdminsForbiddenForNonAdmins() {
+        for (String u : noadmin_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/roles/admins", "nnn");
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be FORBIDDEN for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void postNonExistentAccountInAdmins() {
+        ResponseEntity<String> response = rest.POST("nan", "/iam/roles/admins", "nonexistent");
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    public void deleteNonExistentAccountInAdminsIsOk() {
+        ResponseEntity<String> response = rest.DELETE("nan", "/iam/roles/admins/nonexistent");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
+    public void duplicatePostAccountInAdminsIsOK() {
+        ResponseEntity<String> response = rest.POST("nan", "/iam/roles/admins", "unn");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
         // Clients Methods
     
     @Test
@@ -568,8 +629,10 @@ class IamRestControllerTests {
         for (String u : admin_accounts) {
             ResponseEntity<String> response = rest.POST(u, "/iam/clients", "new-client");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            assertTrue(iamService.isGroup(Flavour.CLIENT, "new-client"));
             response = rest.DELETE(u, "/iam/clients/new-client");
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            assertFalse(iamService.isGroup(Flavour.CLIENT, "new-client"));
         }
     }
 
@@ -578,9 +641,61 @@ class IamRestControllerTests {
         for (String u : noadmin_accounts) {
             ResponseEntity<String> response = rest.POST(u, "/iam/clients", "new-client");
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
+            assertFalse(iamService.isGroup(Flavour.CLIENT, "new-client"));
             response = rest.DELETE(u, "/iam/clients/test");
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
+            assertTrue(iamService.isGroup(Flavour.CLIENT, "test"));
         }
+    }
+
+    @Test
+    public void addAndRemoveAccountToClientAllowedForAdmins() {
+        for (String u : admin_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/clients/test", "dummy");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            assertTrue(iamService.isAccountInGroup("dummy", "test"));
+            response = rest.DELETE(u, "/iam/clients/test/dummy");
+            assertEquals(HttpStatus.OK, response.getStatusCode(), "Should be allowed for '%s'".formatted(u));
+            assertFalse(iamService.isAccountInGroup("dummy", "test"));
+        }
+    }
+
+    @Test
+    public void addAndRemoveAccountToClientForbiddenForNonAdmins() {
+        for (String u : noadmin_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/clients/test", "dummy");
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
+            assertFalse(iamService.isAccountInGroup("dummy", "test"));
+            response = rest.DELETE(u, "/iam/clients/test/dummy");
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be forbidden for '%s'".formatted(u));
+            assertFalse(iamService.isAccountInGroup("dummy", "test"));
+        }
+    }
+
+    @Test
+    public void postAccountInClientForbiddenForNonAdmins() {
+        for (String u : noadmin_accounts) {
+            ResponseEntity<String> response = rest.POST(u, "/iam/clients/test", "nnn");
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should be FORBIDDEN for '%s'".formatted(u));
+        }
+    }
+
+    @Test
+    public void postNonExistentAccountInClient() {
+        ResponseEntity<String> response = rest.POST("nan", "/iam/clients/test", "nonexistent");
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    public void deleteNonExistentAccountInClientIsOk() {
+        ResponseEntity<String> response = rest.DELETE("nan", "/iam/clients/nonexistent");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
+    public void duplicatePostAccountInClientIsOk() {
+        ResponseEntity<String> response = rest.POST("nan", "/iam/clients/test", "unt");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
         // Helpers
@@ -652,15 +767,6 @@ class IamRestControllerTests {
             "[ " + Arrays.stream(ss).map(s -> "\"%s\"".formatted(s)).collect(Collectors.joining(",")) + " ]";
     }
     
-    private IamService.AccountDetail createAccount(String id, String[] groups) {
-        return iamService.createAccount(new IamService.AccountDetail(
-                id, "Mr. " + id, id + "@example.com", PASSWORD_PREFIX + id, groups));
-    }
-
-    private void deleteAccount(String id) {
-        iamService.deleteAccount(id);
-    }
-
     private String[] all_accounts =            { "nnn", "nnt", "nan", "nat", "unn", "unt", "uan", "uat" };
 //    private String[] nouser_noadmin_accounts = { "nnn", "nnt" };
     private String[] noclient_noadm_accounts = { "nnn",                      "unn",                     };

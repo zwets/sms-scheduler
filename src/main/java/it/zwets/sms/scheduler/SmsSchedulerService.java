@@ -25,6 +25,9 @@ public class SmsSchedulerService {
 	@Autowired
 	private HistoryService historyService;
 
+	/** The DTO for reporting status */
+    public final record SmsStatus(String clientId, String targetId, String uniqueId, String status, int retries) { }
+
 	@Transactional
     public SmsStatus scheduleSms(
     		String clientId, String targetId, String uniqueId, 
@@ -149,53 +152,4 @@ public class SmsSchedulerService {
         		.toList();
     }
     
-    /**
-     * DTO to capture relevant information on scheduled (and TODO: historic) SMS
-     * @author zwets
-     */
-    public static class SmsStatus {
-    	private String clientId;
-    	private String targetId;
-    	private String uniqueId;
-    	private String status;
-    	private int retries;
-    	
-		public SmsStatus(String clientId, String targetId, String uniqueId, String status, int retries) {
-			this.clientId = clientId;
-			this.targetId = targetId;
-			this.uniqueId = uniqueId;
-			this.status = status;
-			this.retries = retries;
-		}
-		public String getClientId() {
-			return clientId;
-		}
-		public void setClientId(String clientId) {
-			this.clientId = clientId;
-		}
-		public String getTargetId() {
-			return targetId;
-		}
-		public void setTargetId(String targetId) {
-			this.targetId = targetId;
-		}
-		public String getUniqueId() {
-			return uniqueId;
-		}
-		public void setUniqueId(String uniqueId) {
-			this.uniqueId = uniqueId;
-		}
-		public String getStatus() {
-			return status;
-		}
-		public void setStatus(String status) {
-			this.status = status;
-		}
-		public int getRetries() {
-			return retries;
-		}
-		public void setRetries(int retries) {
-			this.retries = retries;
-		}
-    }
 }

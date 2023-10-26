@@ -9,18 +9,41 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import it.zwets.sms.scheduler.iam.IamService;
+
 public class RestTestHelper {
 
+    private IamService iamService;
     private String baseUrl;
-    private String passPfx;
+    private String defaultUser = "admin";
+    private String defaultPassword = "test";
     
-    public RestTestHelper(String baseUrl, int port, String passPfx) {
+    public RestTestHelper(IamService iamService, String baseUrl, int port) {
+        this.iamService = iamService;
         this.baseUrl = baseUrl + ":" + port;
-        this.passPfx = passPfx; 
     }
 
-    public String getPassword(String id) {
-        return passPfx + id;
+    public RestTestHelper(IamService iamService, String baseUrl, int port, String defaultUser, String defaultPassword) {
+        this.iamService = iamService;
+        this.baseUrl = baseUrl + ":" + port;
+        this.defaultUser = defaultUser;
+        this.defaultPassword = defaultPassword;
+    }
+
+    public ResponseEntity<String> GET(String url) {
+        return GET(defaultUser, defaultPassword, url);
+    }
+    
+    public ResponseEntity<String> DELETE(String url) {
+        return DELETE(defaultUser, defaultPassword, url);
+    }
+    
+    public ResponseEntity<String> POST(String url, String body) {
+        return POST(defaultUser, defaultPassword, url, body);
+    }
+    
+    public ResponseEntity<String> PUT(String url, String body) {
+        return PUT(defaultUser, defaultPassword, url, body);
     }
     
     public ResponseEntity<String> GET(String id, String url) {
@@ -64,5 +87,27 @@ public class RestTestHelper {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN));
         return new HttpEntity<String>(json, headers);        
+    }
+
+    public String getPassword(String id) {
+        return "_password_" + id;
+    }
+    
+    public void createAccount(String id, String[] groups) {
+        iamService.createAccount(new IamService.AccountDetail(
+                id, "Mr. " + id, id + "@example.com", getPassword(id), groups));
+    }
+
+    public void deleteAccount(String id) {
+        iamService.deleteAccount(id);
+    }
+
+    public void createDefaultAccount(String... groups) {
+        iamService.createAccount(new IamService.AccountDetail(
+                defaultUser, "Default User", "default@example.com", defaultPassword, groups));
+    }
+    
+    public void deleteDefaultAccount() {
+        iamService.deleteAccount(defaultUser);
     }
 }

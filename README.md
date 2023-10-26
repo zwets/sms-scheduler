@@ -19,7 +19,8 @@ projects with strong privacy and reliability requirements.  In particular:
 
 Additional requirements:
 
- * Multi-tenancy: multiple independent clients can concurrently use it
+ * Multi-tenancy: multiple independent clients can concurrently use the
+   system
  * Reporting: clients can query for the status of scheduled SMSes
 
 Overview of Mechanism:
@@ -54,10 +55,17 @@ Overview of Implementation
 
 @TODO@
 
+---
+
+## Development Notes
+
+* [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/docs/3.1.4/maven-plugin/reference/html/)
+
+---
 
 #### License
 
-sms-scheduler - Secure and reliable scheduled delivery of SMS messages
+sms-scheduler - Secure and reliable scheduled delivery of SMS messages  
 Copyright (C) 2023  Marco van Zwetselaar <io@zwets.it>
 
 This program is free software: you can redistribute it and/or modify
@@ -73,11 +81,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
----
-## Development
-
-* [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/docs/3.1.4/maven-plugin/reference/html/)
-* [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/)
-* [Building REST services with Spring](https://spring.io/guides/tutorials/rest/)
 
