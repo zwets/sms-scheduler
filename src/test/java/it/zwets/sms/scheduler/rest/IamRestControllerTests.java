@@ -36,6 +36,7 @@ import it.zwets.sms.scheduler.iam.IamService.AccountDetail;
 class IamRestControllerTests {
 
     private static final Logger LOG = LoggerFactory.getLogger(IamRestControllerTests.class);
+    private static final String PASSWORD_PREFIX = "password_";
 
     @LocalServerPort
     private int port;
@@ -47,7 +48,7 @@ class IamRestControllerTests {
     
     @BeforeAll
     public void beforeAll() {
-        rest = new RestTestHelper("http://localhost", port);
+        rest = new RestTestHelper("http://localhost", port, PASSWORD_PREFIX);
     }
     
     @BeforeEach
@@ -95,7 +96,7 @@ class IamRestControllerTests {
     
     @Test
     public void authenticatedRequestOnRoot() {
-        ResponseEntity<String> response = new TestRestTemplate("nnn", "nnn")
+        ResponseEntity<String> response = new TestRestTemplate("nnn", rest.getPassword("nnn"))
                 .getForEntity("http://localhost:" + port + "/iam", String.class);
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
@@ -169,7 +170,7 @@ class IamRestControllerTests {
     @Test
     public void createAccountWorksForAdmins() {
         for (String u : admin_accounts) {
-            ResponseEntity<String> response = rest.POST(u, "/iam/accounts", userJson("createAccountWorksForAdmins", "users"));
+            ResponseEntity<String> response = rest.POST(u, "/iam/accounts", simpleUserJson("createAccountWorksForAdmins", "users"));
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
             deleteAccount("createAccountWorksForAdmins");
         }
@@ -178,7 +179,7 @@ class IamRestControllerTests {
     @Test
     public void createAccountForbiddenForNonAdmins() {
         for (String u : noadmin_accounts) {
-            ResponseEntity<String> response = rest.POST(u, "/iam/accounts", userJson("createAccountForbiddenForNonAdmins", "users"));
+            ResponseEntity<String> response = rest.POST(u, "/iam/accounts", simpleUserJson("createAccountForbiddenForNonAdmins", "users"));
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
         }
     }
@@ -186,19 +187,19 @@ class IamRestControllerTests {
     @Test
     public void createAccountChecksEmptyId() {
         String u = "nan";
-        ResponseEntity<String> response = rest.POST(u, "/iam/accounts", userJson("", "users"));
+        ResponseEntity<String> response = rest.POST(u, "/iam/accounts", simpleUserJson("", "users"));
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
     @Test
     public void createAccountChecksGroups() {
-        ResponseEntity<String> response = rest.POST("nan", "/iam/accounts", userJson("createAccountChecksGroups", "non-existent-group"));
+        ResponseEntity<String> response = rest.POST("nan", "/iam/accounts", simpleUserJson("createAccountChecksGroups", "non-existent-group"));
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
     @Test
     public void createAccountChecksExists() {
-        ResponseEntity<String> response = rest.POST("nan", "/iam/accounts", userJson("nnn"));
+        ResponseEntity<String> response = rest.POST("nan", "/iam/accounts", simpleUserJson("nnn"));
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
     }
 
@@ -207,7 +208,7 @@ class IamRestControllerTests {
     @Test
     public void updateAccountWorksForAdmins() {
         for (String u : admin_accounts) {
-            ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/dummy", userJson("dummy", "users"));
+            ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/dummy", simpleUserJson("dummy", "users"));
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
         }
     }
@@ -215,7 +216,7 @@ class IamRestControllerTests {
     @Test
     public void updateAccountForbiddenForNonAdmins() {
         for (String u : noadmin_accounts) {
-            ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/dummy", userJson("dummy", "users"));
+            ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/dummy", simpleUserJson("dummy", "users"));
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
         }
     }
@@ -223,7 +224,7 @@ class IamRestControllerTests {
     @Test
     public void updateAccountWorksForSelf() {
         String u = "nnn";
-        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, makeUserJson(null, "New Name", "new@example.com", null, null));
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, userJson(null, "New Name", "new@example.com", null, null));
         assertEquals(HttpStatus.OK, response.getStatusCode());
         
         AccountDetail account = deserializeAccount(response);
@@ -236,96 +237,114 @@ class IamRestControllerTests {
     
     @Test void updateAccountCanOmitFields() {
         String u = "nnt";
-        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, makeUserJson(u, null, null, null, null));
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, userJson(u, null, null, null, null));
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         AccountDetail account = deserializeAccount(response);
         assertEquals(u, account.id());
-        assertEquals(u, account.name());
-        assertEquals(u, account.email());
+        assertEquals("Mr. " + u, account.name());
+        assertEquals(u + "@example.com", account.email());
         assertNull(account.password());
         assertEquals(1, account.groups().length); // nnt has one group
-        assertTrue(iamService.checkPassword(u, u));
+        assertTrue(iamService.checkPassword(u, "password_" + u));
     }
 
     @Test
     public void updateAccountLeavesNullFieldsUntouched() {
         String u = "nnt";
-        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, makeUserJson(u, null, null, null, null));
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, userJson(u, null, null, null, null));
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         AccountDetail account = deserializeAccount(response);
         assertEquals(u, account.id());
-        assertEquals(u, account.name());
-        assertEquals(u, account.email());
+        assertEquals("Mr. " + u, account.name());
+        assertEquals(u + "@example.com", account.email());
         assertNull(account.password());
         assertEquals(1, account.groups().length); // nnt has one group
-        assertTrue(iamService.checkPassword(u, u));
+        assertTrue(iamService.checkPassword(u, "password_" + u));
     }
 
     @Test
     public void updateAccountLeavesEmptyFieldsUntouched() {
         String u = "nat";
-        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, makeUserJson(u, "", "", "", null));
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, userJson(u, "", "", "", null));
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         AccountDetail account = deserializeAccount(response);
         assertEquals(u, account.id());
-        assertEquals(u, account.name());
-        assertEquals(u, account.email());
+        assertEquals("Mr. " + u, account.name());
+        assertEquals(u + "@example.com", account.email());
         assertNull(account.password());
         assertEquals(2, account.groups().length); // nat has two
-        assertTrue(iamService.checkPassword(u, u));
+        assertTrue(iamService.checkPassword(u, "password_" + u));
     }
 
     @Test
     public void updateAccountCanChangePassword() {
         String u = "nan";
-        String p = "new-password";
-        assertTrue(iamService.checkPassword(u, u));
-        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, makeUserJson(u, null, null, p, null));
+        String op = rest.getPassword(u);
+        String np = "new-password";
+        assertTrue(iamService.checkPassword(u, op));
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/" + u, userJson(u, null, null, np, null));
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(iamService.checkPassword(u, p));
-        iamService.updatePassword(u, u);
-        assertTrue(iamService.checkPassword(u, u));
+        assertTrue(iamService.checkPassword(u, np));
+        iamService.updatePassword(u, op);
+        assertTrue(iamService.checkPassword(u, op));
     }
 
     @Test
     public void updateSelfAccountCannotChangeGroups() {
         String u = "unt";
-        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/%s".formatted(u), makeUserJson(u, "New Name", "new@example.com", null, 
-                new String[] { "admins", "users", "test" }));
-        assertEquals(HttpStatus.OK, response.getStatusCode(), "Should work for '%s'".formatted(u));
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/%s".formatted(u), userJson(u, "New Name", "new@example.com", null, 
+                new String[] { IamService.ADMINS_GROUP, IamService.USERS_GROUP, IamService.TEST_GROUP }));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
         
         AccountDetail account = deserializeAccount(response);
         assertEquals(u, account.id());
         assertEquals("New Name", account.name());
         assertEquals("new@example.com", account.email());
         assertNull(account.password());
-        assertTrue(Arrays.asList(account.groups()).contains("users"));
-        assertTrue(Arrays.asList(account.groups()).contains("test"));
-        assertFalse(Arrays.asList(account.groups()).contains("admins"));
+        assertTrue(Arrays.asList(account.groups()).contains(IamService.USERS_GROUP));
+        assertTrue(Arrays.asList(account.groups()).contains(IamService.TEST_GROUP));
+        assertFalse(Arrays.asList(account.groups()).contains(IamService.ADMINS_GROUP));
         assertEquals(2, account.groups().length);
     }
 
     @Test
+    public void updateAdminSelfAccountCanChangeGroups() {
+        String u = "nan";
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/%s".formatted(u), userJson(u, null, null, null, 
+                new String[] { IamService.ADMINS_GROUP, IamService.TEST_GROUP }));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(iamService.isAccountInGroup(u, IamService.TEST_GROUP));
+        iamService.removeAccountFromGroup(u, IamService.TEST_GROUP);
+    }
+    
+    @Test
+    public void updateAdminSelfAccountCannotRemoveAdminRole() {
+        String u = "nan";
+        ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/%s".formatted(u), userJson(u, null, null, null, 
+                new String[] { IamService.TEST_GROUP }));
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
+    
+    @Test
     public void updateAccountFailsOnEmptyEndpoint() {
-        ResponseEntity<String> response = rest.PUT("nan", "/iam/accounts/", userJson("dummy"));
+        ResponseEntity<String> response = rest.PUT("nan", "/iam/accounts/", simpleUserJson("dummy"));
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
     @Test
     public void updateAccountFailsOnMismatchingEndpoint() {
-        ResponseEntity<String> response = rest.PUT("nan", "/iam/accounts/dummy", userJson("not-dummy"));
+        ResponseEntity<String> response = rest.PUT("nan", "/iam/accounts/dummy", simpleUserJson("not-dummy"));
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
     @Test
     public void updateAccountFailsOnNonExistentUser() {
-        ResponseEntity<String> response = rest.PUT("nan", "/iam/accounts/non-existent", userJson("non-existent"));
+        ResponseEntity<String> response = rest.PUT("nan", "/iam/accounts/non-existent", simpleUserJson("non-existent"));
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
-
 
         // Delete Account
     
@@ -366,31 +385,33 @@ class IamRestControllerTests {
     public void updatePasswordAllowedForAdmins() {
         for (String u : admin_accounts) {
             String t = "dummy";
-            String p = "new-password";
-            assertTrue(iamService.checkPassword(t, t));
-            ResponseEntity<String> response = rest.POST(u, "/iam/accounts/%s/password".formatted(t), p);
+            String op = rest.getPassword(t);
+            String np = "new-password";
+            assertTrue(iamService.checkPassword(t, op));
+            ResponseEntity<String> response = rest.POST(u, "/iam/accounts/%s/password".formatted(t), np);
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should give OK for '%s'".formatted(u));
-            assertTrue(iamService.checkPassword(t, p));
-            iamService.updatePassword(t, t);            
-            assertTrue(iamService.checkPassword(t, t));
+            assertTrue(iamService.checkPassword(t, np));
+            iamService.updatePassword(t, op);            
+            assertTrue(iamService.checkPassword(t, op));
         }
     }
 
     @Test
     public void updatePasswordAllowedForSelf() {
         for (String u : all_accounts) {
-            String p = "new-password";
-            assertTrue(iamService.checkPassword(u, u));
-            ResponseEntity<String> response = rest.POST(u, "/iam/accounts/%s/password".formatted(u), p);
+            String op = rest.getPassword(u);
+            String np = "new-password";
+            assertTrue(iamService.checkPassword(u, op));
+            ResponseEntity<String> response = rest.POST(u, "/iam/accounts/%s/password".formatted(u), np);
             assertEquals(HttpStatus.OK, response.getStatusCode(), "Should give OK for '%s'".formatted(u));
-            assertTrue(iamService.checkPassword(u, p));
-            iamService.updatePassword(u, u);            
-            assertTrue(iamService.checkPassword(u, u));
+            assertTrue(iamService.checkPassword(u, np));
+            iamService.updatePassword(u, op);            
+            assertTrue(iamService.checkPassword(u, op));
         }
     }
 
     @Test
-    public void updatePasswordNotAllowedForOther() {
+    public void updatePasswordForbiddenForOther() {
         for (String u : noadmin_accounts) {
             ResponseEntity<String> response = rest.POST(u, "/iam/accounts/dummy/password", "anything");
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Should give FORBIDDEN for '%s'".formatted(u));
@@ -594,11 +615,11 @@ class IamRestControllerTests {
         return new AccountDetail(id, name, email, password, groups);
     }
     
-    private String userJson(String name, String... groups) {
-        return makeUserJson(name, "Mr. " + name, name + "@example.com", "pass_" + name, groups);
+    private String simpleUserJson(String name, String... groups) {
+        return userJson(name, name, name, name, groups);
     }
     
-    private String makeUserJson(String id, String name, String email, String password, String[] groups) {
+    private String userJson(String id, String name, String email, String password, String[] groups) {
 
         String sep = "";
         StringBuilder b = new StringBuilder();
@@ -632,7 +653,8 @@ class IamRestControllerTests {
     }
     
     private IamService.AccountDetail createAccount(String id, String[] groups) {
-        return iamService.createAccount(new IamService.AccountDetail(id, id, id, id, groups));
+        return iamService.createAccount(new IamService.AccountDetail(
+                id, "Mr. " + id, id + "@example.com", PASSWORD_PREFIX + id, groups));
     }
 
     private void deleteAccount(String id) {
@@ -649,7 +671,6 @@ class IamRestControllerTests {
     private String[] admin_accounts =   { "nan", "nat", "uan", "uat" };
     private String[] noadmin_accounts = { "nnn", "nnt", "unn", "unt" };
     private String[] client_users =     { "unt", "uat" };
-    private String[] noclient_acounts = { "nnn", "nan", "unn", "uan" };
 }
 
 // vim: sts=4:sw=4:et:ai:si
