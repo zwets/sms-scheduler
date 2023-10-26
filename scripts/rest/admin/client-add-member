@@ -1,0 +1,16 @@
+#!/bin/bash
+
+CONTEXT=/iam/clients
+USAGE="CID UID
+
+  Add account UID to client CID
+
+  POSITIONAL PARAMS
+   CID       Unique client ID
+   UID       Unique account ID"
+
+. "$(dirname "$0")/../lib/common.sh"
+
+(($# == 2)) || usage_exit 1
+
+echo | rest_PUT /$1/$2

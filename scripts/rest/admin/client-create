@@ -1,0 +1,12 @@
+#!/bin/bash
+
+CONTEXT=/iam/clients
+USAGE="CID
+
+  Create a new client group with name CID"
+
+. $(realpath $(dirname "$0")/../lib/common.sh)
+
+(($# == 1)) || usage_exit 1
+
+echo "$1" | rest_POST
