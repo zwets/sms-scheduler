@@ -25,13 +25,13 @@ import org.springframework.stereotype.Component;
  * 
  * <ul>
  * <li>Flowable IDM has accounts, groups, and privileges.  An account can
- *   be in any number of groups.  Priviliges can be attached to accounts
+ *   be in any number of groups.  Privileges can be attached to accounts
  *   and to groups.  Privileges translate into granted authorities.</li>
  * <li>Authorities bridge to Spring Boot; they sit on the Authentication
  *   context when there is a logged-in user, and can be used in the filter
  *   chain for web requests.  Spring roles are just authorities with prefix
  *   "ROLE_", and can be conveniently tested with <code>hasRole()</code>.
- *   I.e. <code>hasRole("Q") == hasAuthority("ROLE_Q")</code>.
+ *   So, <code>hasRole("Q") == hasAuthority("ROLE_Q")</code>.
  * <li>In our SMS Service we similarly have two aspects for authorisation:
  *   user accounts have roles (user, admin) and "authorities" to act on
  *   behalf of clients (test, consort, mint).</li>
@@ -50,32 +50,41 @@ import org.springframework.stereotype.Component;
  * <li>We thus have a <code>1:N</code> relation of <code>account</code> to
  *   <code>group = privilege = authority</code>, and each account must be
  *   explicitly added to each group whose authorities it needs.</li>
- * <li>Authorities come (for now) in two flavours: ROLE and CLIENT, but all
- *   this means (in the absence of role hierarchy): <code>hasRole("X")</code>
- *   can be used as shorthand for <code>hasAuthority("ROLE_X")</code>.</li>
+ * <li>For each group "gid" we create, we create a privilege "ROLE_gid" and
+ *   map the group (uniquely) on this.</li>
+ * <li>We distinguish (for now) two flavours of groups, which we administer
+ *   in the <code>groupType</code> of the group:
+ *   <ul><li>The "role" flavour has two fixed built-in groups: <b>users</b>
+ *     and <b>admins</b>. (There is no point in allowing dynamic additions,
+ *     as these roles are "hard-baked" in the permission checks in the app.)
+ *     <li>The "client" flavour is dynamic: a new group is added (by a user
+ *     with admin permission) for each new client (tenant).</li>
+ *   </ul>
+ *   Effectively, the "role" flavour is for function authorisation, and the
+ *   "client" flavour is for data authorisation.
  * </ul>
  * 
  * <h1>Out of the box setup</h1>
  * 
  * <ul>
- * <li>Two roles authorities: ROLE_users and ROLE_admins, conferred by groups
- *   "users" and "admins" respectively.</li>
- * <li>One client authority: CLIENT_test, conferred by group "test".</li>
- * <li>One account "admin" with password "test" which is a member of both
- *   roles and the one client.</li>
+ * <li>One account "admin" with password "test". This account is a member of
+ *   the "admins" group.</li>
+ * <li>Two role groups: "users" and "admins". Any account that is not in the
+ *   "users" group has no access to the application. Only accounts in the
+ *   "admins" group can create new accounts and clients.</li>
+ * <li>One client group: <b>test</b>, whose members have authority to act
+ *   op behalf of the "test" client..</li>
  * </ul>
  * 
  * The out-of-box admin account is there so you can create an admin account
- * for yourself.  Remember to <b>remove it</b> right after that.
+ * for yourself.  See the <code>account-create</code> script in this repo.
  * 
  * <h1>Implementation Details</h1>
  * 
- * We use the <code>Group.groupType</code> field to store the authority
- * flavour ("ROLE", "CLIENT"), which also doubles a the authority prefix.
- * 
- * We then create a <code>Group</code> with <code>id = "admins"</code> and
- * <code>type = "ROLE"</code>, and map it to a privilege with 
- * <code>name = group.type + "_" + "admins"</code>.
+ * When a group "gid" is created, we create a privilege "ROLE_gid" and map
+ * the group on the privilege. We set the group flavour on its groupType.
+ * Groups of both flavours live in a single "namespace", i.e. you cannot
+ * have a role group by the same name as a client group.
  */
 
 @Component
@@ -380,7 +389,7 @@ public class IamService {
      * @throws IllegalArgumentException if group exists
      */
     public GroupDetail createGroup(Flavour flavour, String groupId) {
-        LOG.trace("create group {} with authority {}_{}", groupId, flavour, groupId);
+        LOG.trace("create {} group {}", flavour, groupId);
 
         if (StringUtils.isBlank(groupId)) {
             throw new IllegalArgumentException("Group ID must not be blank");
@@ -397,10 +406,10 @@ public class IamService {
         flwGroup.setType(flavour.toString());
         identityService.saveGroup(flwGroup);
 
-        String privName = "%s_%s".formatted(flavour, groupId);
-        Privilege priv = identityService.createPrivilege(privName);
+        String roleName = "ROLE_%s".formatted(groupId);
+        Privilege priv = identityService.createPrivilege(roleName);
 
-        LOG.debug("assigning privilege {} to group {}", privName, groupId);
+        LOG.debug("assigning privilege {} to group {}", roleName, groupId);
         identityService.addGroupPrivilegeMapping(priv.getId(), groupId);
 
         return getGroup(flavour, groupId);
@@ -414,6 +423,18 @@ public class IamService {
     public boolean isGroup(String id) {
         boolean result = identityService.createGroupQuery().groupId(id).count() != 0;
         LOG.trace("isGroup({}) -> {}", id, result);
+        return result;
+    }
+    
+    /**
+     * Check for existing flavoured group
+     * @param flavour
+     * @param id
+     * @return true iff group of flavour id exists
+     */
+    public boolean isGroup(Flavour flavour, String id) {
+        boolean result = identityService.createGroupQuery().groupId(id).groupType(flavour.toString()).count() != 0;
+        LOG.trace("isGroup({},{}) -> {}", flavour, id, result);
         return result;
     }
     
@@ -474,12 +495,23 @@ public class IamService {
     }
 
     /**
-     * Delete the group with groupId.  No-op if group does not exist.
-     * @param groupId
+     * Delete the group with id.  No-op if group does not exist.
+     * @param id
      */
-    public void deleteGroup(String groupId) {
-        LOG.debug("delete group {}", groupId);
-        identityService.deleteGroup(groupId);
+    public void deleteGroup(String id) {
+        LOG.debug("delete group {}", id);
+        
+        Group group = identityService.createGroupQuery().groupId(id).singleResult();
+        if (group != null) {
+            
+            String roleName = "ROLE_%s".formatted(id);
+            Privilege priv = identityService.createPrivilegeQuery().privilegeName(roleName).singleResult();
+            if (priv != null) {
+                identityService.deletePrivilege(priv.getId());
+            }
+                    
+            identityService.deleteGroup(id);
+        }
     }
 
     /* Helper to return the group list for an account. */
