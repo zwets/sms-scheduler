@@ -1,9 +1,9 @@
 #!/bin/bash
 
-CONTEXT=/iam/groups
+CONTEXT=/iam/roles
 USAGE="[GID]
 
-  Lists groups or members of single group GID"
+  Lists all roles or members of role GID"
 
 . $(realpath $(dirname "$0")/../lib/common.sh)
 

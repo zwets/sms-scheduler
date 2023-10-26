@@ -1,12 +1,12 @@
 #!/bin/bash
 
-CONTEXT=/iam/groups
+CONTEXT=/iam/roles
 USAGE="GID UID
 
-  Remove account UID from group GID
+  Remove account UID from role GID
 
   POSITIONAL PARAMS
-   GID       Unique group ID
+   GID       Unique role ID (admins, users)
    UID       Unique account ID"
 
 . "$(dirname "$0")/../lib/common.sh"

@@ -13,4 +13,4 @@ USAGE="CID UID
 
 (($# == 2)) || usage_exit 1
 
-echo | rest_PUT /$1/$2
+echo $2 | rest_POST /$1

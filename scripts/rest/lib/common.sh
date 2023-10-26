@@ -11,9 +11,9 @@ export TEXTONLY=${TEXTONLY:-}
 export DUMPINPUT=${DUMPINPUT:-}
 export BASEURL="${BASEURL:-http://localhost:8081}"
 export CONTEXT="${CONTEXT:-}"
-# UANDP is a convenience for testing with accounts with UNAME==PWORD
-export UNAME="${UNAME:-${UANDP:-admin}}"
-export PWORD="${PWORD:-${UANDP:-test}}"
+# UP is a convenience for testing with accounts with UNAME==PWORD
+export UNAME="${UNAME:-${UP:-admin}}"
+export PWORD="${PWORD:-${UP:-test}}"
 
 export USAGE="${USAGE:-}
 

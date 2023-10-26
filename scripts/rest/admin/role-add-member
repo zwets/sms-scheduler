@@ -1,12 +1,12 @@
 #!/bin/bash
 
-CONTEXT=/iam/groups
+CONTEXT=/iam/roles
 USAGE="GID UID
 
-  Add account UID to group GID
+  Add account UID to role GID
 
   POSITIONAL PARAMS
-   GID       Unique group ID
+   GID       Unique role ID (admins or users)
    UID       Unique account ID"
 
 . "$(dirname "$0")/../lib/common.sh"

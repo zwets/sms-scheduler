@@ -201,6 +201,10 @@ public class IamRestController {
     @PreAuthorize("hasRole('admins') && (#gid != 'admins' || #uid != authentication.name)")
     public void deleteAccountInRole(@PathVariable String gid, @PathVariable String uid) {
         LOG.debug("REST DELETE roles/{}/{}: removing member", gid, uid);
+	if (!iamService.isGroup(Flavour.ROLE, gid)) {
+            LOG.warn("REST DELETE roles/{}/{}: role not found", gid, uid);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found: %s".formatted(gid));
+        }
         iamService.removeAccountFromGroup(uid, gid);
     }
 
@@ -262,7 +266,7 @@ public class IamRestController {
     
     @PostMapping(path = "clients/{gid}")
     @PreAuthorize("hasRole('admins')")
-    public void postAccountInClient(@PathVariable String gid, @PathVariable String uid) {
+    public void postAccountInClient(@PathVariable String gid, @RequestBody String uid) {
         LOG.trace("REST POST clients/{}", gid);
        
         if (!iamService.isGroup(Flavour.CLIENT, gid)) {
@@ -282,6 +286,10 @@ public class IamRestController {
     @PreAuthorize("hasRole('admins')")
     public void deleteAccountInClient(@PathVariable String gid, @PathVariable String uid) {
         LOG.debug("REST DELETE clients/{}/{}: removing member", gid, uid);
+	if (!iamService.isGroup(Flavour.CLIENT, gid)) {
+            LOG.warn("REST DELETE clients/{}/{}: client not found", gid, uid);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Client not found: %s".formatted(gid));
+        }
         iamService.removeAccountFromGroup(uid, gid);
     }
 
