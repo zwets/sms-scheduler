@@ -155,7 +155,7 @@ public class IamService {
             throw new IllegalArgumentException("No such group: %s".formatted(nonGroup.get()));
         }
     
-        LOG.info("creating account: {}", detail.id);
+        LOG.debug("creating account: {}", detail.id);
         
         User user = identityService.newUser(detail.id);
         user.setDisplayName(detail.name);
@@ -214,23 +214,21 @@ public class IamService {
             throw new IllegalArgumentException("No such account: %s".formatted(update.id));
         }
         
-        LOG.info("updating account: {}", id);
+        LOG.debug("updating account: {}", id);
 
             // Regular fields
-        
-        if (update.name != null) {
+       
+        if (StringUtils.stripToNull(update.name) != null) {
             user.setDisplayName(update.name);
         }
-        if (update.email != null) {
+        if (StringUtils.stripToNull(update.email) != null) {
             user.setEmail(update.email);
         }
-        if (update.name != null || update.email != null) {
-            identityService.saveUser(user);
-        }
+        identityService.saveUser(user);
 
             // Password needs specific call
         
-        if (update.password != null) {
+        if (StringUtils.stripToNull(update.password) != null) {
             updatePassword(id, update.password);
         }
         
@@ -261,7 +259,7 @@ public class IamService {
      * @param id
      */
     public void deleteAccount(String id) {
-        LOG.info("delete account: {}", id);
+        LOG.debug("delete account: {}", id);
         identityService.deleteUser(id);
     }
 
@@ -336,7 +334,7 @@ public class IamService {
      * @throws RuntimeException if account or group don't exist
      */
     public void addAccountToGroup(String accountId, String groupId) {
-        LOG.info("add account {} to group {}", accountId, groupId);
+        LOG.debug("add account {} to group {}", accountId, groupId);
         if (!isAccountInGroup(accountId, groupId)) {
             identityService.createMembership(accountId, groupId);
         }
@@ -348,7 +346,7 @@ public class IamService {
      * @param groupId
      */
     public void removeAccountFromGroup(String accountId, String groupId) {
-        LOG.info("remove account {} from group {}", accountId, groupId);
+        LOG.debug("remove account {} from group {}", accountId, groupId);
         identityService.deleteMembership(accountId, groupId);
     }
 
@@ -374,7 +372,7 @@ public class IamService {
         if (user != null) {
             user.setPassword(password);
             identityService.updateUserPassword(user);
-            LOG.info("password updated for account: {}", id);
+            LOG.debug("password updated for account: {}", id);
         }
         else {
             LOG.warn("account does not exist: {}", id);
@@ -399,7 +397,7 @@ public class IamService {
             throw new IllegalArgumentException("Group already exists: %s".formatted(groupId));
         }
 
-        LOG.info("creating {} group {}", flavour, groupId);
+        LOG.debug("creating {} group {}", flavour, groupId);
         
         Group flwGroup = identityService.newGroup(groupId);
         flwGroup.setId(groupId);
@@ -473,7 +471,7 @@ public class IamService {
      * @return the list of all groups
      */
     public GroupDetail[] getGroups() {
-        LOG.debug("retrieve all groups");
+        LOG.trace("retrieve all groups");
         return identityService.createGroupQuery()
                 .orderByGroupId().asc().list().stream()
                 .map(g -> new GroupDetail(g.getId(), g.getType(), memberList(g.getId())))
@@ -486,7 +484,7 @@ public class IamService {
      * @return the list
      */
     public GroupDetail[] getGroups(Flavour flavour) {
-        LOG.debug("retrieve all groups with flavour {}", flavour);
+        LOG.trace("retrieve all groups with flavour {}", flavour);
         return identityService.createGroupQuery()
                 .groupType(flavour.toString())
                 .orderByGroupId().asc().list().stream()
@@ -499,7 +497,7 @@ public class IamService {
      * @param id
      */
     public void deleteGroup(String id) {
-        LOG.debug("delete group {}", id);
+        LOG.trace("delete group {}", id);
         
         Group group = identityService.createGroupQuery().groupId(id).singleResult();
         if (group != null) {
@@ -507,9 +505,11 @@ public class IamService {
             String roleName = "ROLE_%s".formatted(id);
             Privilege priv = identityService.createPrivilegeQuery().privilegeName(roleName).singleResult();
             if (priv != null) {
+                LOG.debug("deleting privilege {}", priv.getName());
                 identityService.deletePrivilege(priv.getId());
             }
                     
+            LOG.debug("deleting group {}", id);
             identityService.deleteGroup(id);
         }
     }
@@ -548,3 +548,4 @@ public class IamService {
         String[] acounts) {
     }
 }
+// vim: sts=4:sw=4:et:si:ai
