@@ -1,0 +1,28 @@
+#!/bin/bash
+
+CONTEXT=/schedule
+USAGE="CLIENT TARGET INST PAYLOAD FROM1 TILL1 ...
+
+  Schedule an SMS
+
+  POSITIONAL PARAMS
+   CLIENT       Client on whose behalf you are sending
+   TARGET       Identifier of the target (recipient)
+   INST         Unique identifier of this send within target
+   FROM1 TILL1  Time slot for sending (seconds in the epoch)
+   ...          ... more time slots in which to send"
+
+. "$(dirname "$0")/../lib/common.sh"
+
+(($# >= 6)) || usage_exit
+
+CLIENT="$1"
+TARGET="$2"
+INST="$3"
+PAYLOAD="$4"
+shift 4
+SCHEDULE="$*"
+
+printf '{ "targetId": "%s", "uniqueId": "%s", "schedule": "%s", "payload":  "%s" }' \
+	"$TARGET" "$INST" "$SCHEDULE" "${PAYLOAD/\"/\\\"}" |
+rest_POST /$CLIENT

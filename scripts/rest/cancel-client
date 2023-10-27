@@ -1,6 +1,0 @@
-#!/bin/bash
-
-. "$(dirname "$0")/common.sh"
-
-(($# == 1)) || usage CLIENT
-rest_DELETE "/schedule/$1"

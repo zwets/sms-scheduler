@@ -1,0 +1,21 @@
+#!/bin/bash
+
+CONTEXT=/schedule
+USAGE="[CLIENT [TARGET [INST [PAYLOAD [FROM1 TILL1 ...]]]]]
+
+  Schedule an SMS, with dummy defaults.
+
+  Refer to schedule-sms --help for details"
+
+. "$(dirname "$0")/../lib/common.sh"
+
+[ -z "${1:-}" ] || [ -n "${1%%-*}" ] || usage_exit
+
+NOW=$(date +%s)
+CLIENT="${1:-test}"
+TARGET="${2:-target1}"
+INST="${3:-id$$}"
+PAYLOAD="${4:-Dummy payload}"
+(($# > 4)) && shift 4 && SCHEDULE="$*" || SCHEDULE="$NOW $((NOW+10)) $((NOW+20)) $((NOW+30))"
+
+exec "$(dirname "$0")/schedule-sms" "$CLIENT" "$TARGET" "$INST" "$PAYLOAD" $SCHEDULE

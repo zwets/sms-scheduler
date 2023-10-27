@@ -1,0 +1,17 @@
+#!/bin/bash
+
+CONTEXT=/schedule
+USAGE="CLIENT TARGET INST
+
+  Cancel a scheduled send
+
+  POSITIONAL PARAMS
+   CLIENT    Unique client ID
+   TARGET    Identifies the recipient
+   INST      Identifies the send withing recipient"
+
+. "$(dirname "$0")/../lib/common.sh"
+
+(($# == 3)) || usage_exit 1
+
+rest_DELETE /$1/$2/$3

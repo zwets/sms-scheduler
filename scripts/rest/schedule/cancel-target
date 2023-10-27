@@ -1,0 +1,16 @@
+#!/bin/bash
+
+CONTEXT=/schedule
+USAGE="CLIENT TARGET
+
+  Remove all scheduled SMS for TARGET in CLIENT
+
+  POSITIONAL PARAMS
+   CLIENT         Unique client ID
+   TARGET         Identifies SMS destination"
+
+. "$(dirname "$0")/../lib/common.sh"
+
+(($# == 2)) || usage_exit 1
+
+rest_DELETE /$1/$2

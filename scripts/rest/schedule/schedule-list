@@ -1,0 +1,17 @@
+#!/bin/bash
+
+CONTEXT=/schedule
+USAGE="[CLIENT [TARGET [INSTANCE]]]
+
+  List schedule, limiting to client, target, instance
+
+  POSITIONAL PARAMS
+   CLIENT    Client ID
+   TARGET    Target ID
+   INSTANCE  Unique ID"
+
+. "$(dirname "$0")/../lib/common.sh"
+
+(($# <= 3)) || [ -n "${1%%-*}" ] || usage_exit 1
+
+rest_GET "${1:+/$1}${2:+/$2}${3:+$3}"
