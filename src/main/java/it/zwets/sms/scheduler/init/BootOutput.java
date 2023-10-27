@@ -13,11 +13,12 @@ import it.zwets.sms.scheduler.Constants;
 @Component
 public class BootOutput implements CommandLineRunner {
     
-    private RepositoryService repositoryService;
-    private RuntimeService runtimeService;
+    private final RepositoryService repositoryService;
+    private final RuntimeService runtimeService;
 
-    public BootOutput(final RepositoryService repositoryService,
-                             final RuntimeService runtimeService) {
+    public BootOutput(
+            final RepositoryService repositoryService,
+            final RuntimeService runtimeService) {
         this.repositoryService = repositoryService;
         this.runtimeService = runtimeService;
     }
