@@ -10,8 +10,6 @@ import org.flowable.task.service.delegate.DelegateTask;
 import org.flowable.variable.api.persistence.entity.VariableInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 /**
  * Diagnostic utility to log execution and task variables.
@@ -22,16 +20,14 @@ import org.springframework.stereotype.Component;
  * 
  * @author zwets
  */
-@Component
 public class VariableLogger {
 	
 	private final Logger LOG = LoggerFactory.getLogger(VariableLogger.class);
 	
-	@Autowired
-	protected RuntimeService runtimeService;
+	private final RuntimeService runtimeService;
 	
-	public void setRuntimeService(RuntimeService runtimeService) {
-		this.runtimeService = runtimeService;
+	public VariableLogger(RuntimeService runtimeService) {
+	    this.runtimeService = runtimeService;
 	}
 	
 	private void dumpVariableInstance(VariableInstance var) {

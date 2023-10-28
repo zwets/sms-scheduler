@@ -29,7 +29,7 @@ public class SecurityConfiguration {
 
         return http.build();
     }
-    
+
     @Bean
     public UserDetailsService userDetailsService(IdmIdentityService identityService) {
         LOG.info("Flowable IDM is the Spring UserDetailsService");

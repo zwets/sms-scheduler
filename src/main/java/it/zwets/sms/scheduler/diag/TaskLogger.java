@@ -5,9 +5,6 @@ import org.flowable.engine.delegate.TaskListener;
 import org.flowable.task.service.delegate.DelegateTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 /**
  * The singleton {@link TaskListener} that we attach at specific tasks
@@ -21,21 +18,20 @@ import org.springframework.stereotype.Component;
  * 
  * @author zwets
  */
-@Component
 public class TaskLogger implements TaskListener {
 
 	private static final long serialVersionUID = 1L;
 	private final Logger LOG = LoggerFactory.getLogger(TaskLogger.class);
 
-	@Autowired
-	private VariableLogger variableDumper;
+	private final VariableLogger variableLogger;
+	private final boolean enabled;
+	private final boolean detailed;
 
-	@Value("${sms-scheduler.diag.tasks}")
-	private boolean enabled;
-
-	@Value("${sms-scheduler.diag.tasks.detailed}")
-	private boolean detailed;
-
+	public TaskLogger(VariableLogger variableLogger, boolean enabled, boolean detailed) {
+	    this.variableLogger = variableLogger;
+	    this.enabled = enabled;
+	    this.detailed = detailed;
+	}
 	/**
 	 * When not enabled, no output whatsoever will be logged.
 	 * @return
@@ -45,27 +41,11 @@ public class TaskLogger implements TaskListener {
 	}
 
 	/**
-	 * When not enabled, no output whatsoever will be logged.
-	 * @param silent
-	 */
-	public void setEnabled(boolean enabled) {
-		this.enabled = enabled;
-	}
-
-	/**
 	 * When detailed, output also the variables set at the execution pointer.
 	 * @return whether to log detailed output
 	 */
 	public boolean isDetailed() {
 		return detailed;
-	}
-
-	/**
-	 * When detailed, output also the variables set at the execution pointer.
-	 * @param detailed
-	 */
-	public void setDetailed(boolean detailed) {
-		this.detailed = detailed;
 	}
 
 	@Override
@@ -90,7 +70,7 @@ public class TaskLogger implements TaskListener {
 					StringUtils.join(task.getCandidates(), ","));
 
 				// And all task variables
-				variableDumper.dumpDelegateTaskVariables(task);
+				variableLogger.dumpDelegateTaskVariables(task);
 			}
 		}
 	}

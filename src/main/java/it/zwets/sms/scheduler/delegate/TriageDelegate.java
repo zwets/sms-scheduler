@@ -6,7 +6,6 @@ import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import it.zwets.sms.scheduler.Constants;
 import it.zwets.sms.scheduler.Schedule;
@@ -16,7 +15,6 @@ import it.zwets.sms.scheduler.Schedule;
  * 
  * @author zwets
  */
-@Component
 public class TriageDelegate implements JavaDelegate {
 
     private static final Logger LOG = LoggerFactory.getLogger(TriageDelegate.class);

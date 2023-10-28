@@ -11,8 +11,6 @@ import org.flowable.idm.api.Privilege;
 import org.flowable.idm.api.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 /**
  * IAM - identity and access management service.
@@ -86,8 +84,6 @@ import org.springframework.stereotype.Component;
  * Groups of both flavours live in a single "namespace", i.e. you cannot
  * have a role group by the same name as a client group.
  */
-
-@Component
 public class IamService {
 
     private static final Logger LOG = LoggerFactory.getLogger(IamService.class);
@@ -101,7 +97,6 @@ public class IamService {
 
     public enum Flavour { ROLE, CLIENT };
 
-    @Autowired
     private IdmIdentityService identityService;
 
     public IamService(IdmIdentityService identityService) {

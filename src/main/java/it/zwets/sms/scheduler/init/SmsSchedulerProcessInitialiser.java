@@ -7,9 +7,6 @@ import org.flowable.common.engine.impl.identity.Authentication;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
 
 import it.zwets.sms.scheduler.Constants;
 import it.zwets.sms.scheduler.Schedule;
@@ -19,16 +16,12 @@ import it.zwets.sms.scheduler.Schedule;
  * 
  * @author zwets
  */
-@Component
 public class SmsSchedulerProcessInitialiser extends AbstractProcessInitialiser {
 
 	private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerProcessInitialiser.class);
 	private static final long serialVersionUID = 1L;
 
 //	private Random rng = new Random();
-
-	@Autowired
-	protected Environment environment;
 
 	@Override
 	public void initialise(DelegateExecution execution) {
