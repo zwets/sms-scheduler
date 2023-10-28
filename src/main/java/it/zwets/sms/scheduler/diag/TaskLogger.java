@@ -30,10 +30,10 @@ public class TaskLogger implements TaskListener {
 	@Autowired
 	private VariableLogger variableDumper;
 
-	@Value("${sms.scheduler.diag.tasks}")
+	@Value("${sms-scheduler.diag.tasks}")
 	private boolean enabled;
 
-	@Value("${sms.scheduler.diag.tasks.detailed}")
+	@Value("${sms-scheduler.diag.tasks.detailed}")
 	private boolean detailed;
 
 	/**

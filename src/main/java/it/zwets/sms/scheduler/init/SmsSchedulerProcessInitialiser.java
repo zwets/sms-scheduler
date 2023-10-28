@@ -49,12 +49,12 @@ public class SmsSchedulerProcessInitialiser extends AbstractProcessInitialiser {
 		
 		String clientId = execution.getVariable(Constants.VAR_CLIENT_ID, String.class);
 		String targetId = execution.getVariable(Constants.VAR_TARGET_ID, String.class);
-		String uniqueId = execution.getVariable(Constants.VAR_UNIQUE_ID, String.class);
 		Schedule schedule = execution.getVariable(Constants.VAR_SMS_SCHEDULE, Schedule.class);
 		String payload = execution.getVariable(Constants.VAR_SMS_PAYLOAD, String.class);
 
-		LOG.info("Process variables before initialisation: C:T:U:S:P {}:{}:{}:{}:P", 
-				clientId, targetId, uniqueId, schedule.toString().replaceAll(" ", "-"), payload);
+		LOG.info("Process variables before initialisation: I:C:T:B:S:P {}:{}:{}:{}:{}:P", 
+				execution.getProcessInstanceId(), clientId, targetId, 
+				execution.getProcessInstanceBusinessKey(), schedule.toString().replaceAll(" ", "-"), payload);
 
 			// Add the following
 		

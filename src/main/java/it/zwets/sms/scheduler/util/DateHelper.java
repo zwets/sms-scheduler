@@ -1,24 +1,42 @@
 package it.zwets.sms.scheduler.util;
 
-import java.util.Calendar;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import java.util.TimeZone;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
-import it.zwets.sms.scheduler.Constants;
+import it.zwets.sms.scheduler.SmsSchedulerConfiguration;
 
 /**
- * Helps convert between date types and do date maths.
+ * Helps with the parsing, formattting and conversion of dates.
+ * 
+ * {@link SmsSchedulerConfiguration} produces a dateHelper bean set
+ * for the (configurable) application's time zone.  This bean will
+ * format datetimes as ISO-8601 instants with the given offset.
+ * 
+ * <b>Note:<b> this does <i>not</i> mean that the application works
+ * with local (i.e. zoneless) times anywhere.  Just that as a
+ * convenience to the end user, times are printed with their offset.
+ * 
  * @author zwets
  */
-@Component
 public class DateHelper {
 	
 	public final Logger LOG = LoggerFactory.getLogger(DateHelper.class);
 	
+	private final DateTimeFormatter formatter;
+	
+	/**
+	 * Produce a DateHelper that formats datetime with the given zoneOffset.
+	 * @param zoneOffset
+	 */
+	public DateHelper(ZoneOffset zoneOffset) {
+	    this.formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(zoneOffset);
+	}
+
 	/**
 	 * Wrapper for new Date() so it works in expressions.
 	 * @return the now moment
@@ -26,45 +44,22 @@ public class DateHelper {
 	public Date now() {
 		return new Date();
 	}
-	
-	/**
-	 * Return a new Date object that is d with its date and time set to noon EAT
-	 * @param d the date object to operate on, or null
-	 * @return null if d is null, or a new Date object
-	 */
-	public Date toNoon(Date d) {
-		return toTime(d, 12, 0);
-	}
 
-	public String toISO8601(Date d) {
-		return "TODO";
+	/**
+	 * Formats date as ISO-8601 with the zone offset set in the constructor
+	 * @param d a date object or null
+	 * @return null or ISO 8601 string with offset
+	 */
+	public String format(Date d) {
+	    return d == null ? null : formatter.format(d.toInstant());
 	}
 	
 	/**
-	 * Return a new Date object that is d with its time changed.
-	 * @param d the date object to operate on, or null
-	 * @return null if d is null, or a new Date object
+	 * Parses ISO 8601 datetime to Date object
+	 * @param iso the ISO string
+	 * @return the Date or null if iso is null
 	 */
-	public Date toTime(Date d, int hour, int min) {
-		Calendar c = Calendar.getInstance(TimeZone.getTimeZone(Constants.APP_TIME_ZONE));
-		c.setTime(d);
-		c.set(Calendar.HOUR_OF_DAY, hour);
-		c.set(Calendar.MINUTE, min);
-		c.set(Calendar.SECOND, 0);
-
-		return c.getTime();
-	}
-
-	/**
-	 * Return the number of days since date.
-	 * @param date, not null
-	 * @return the number of days, rounding to nearest whole day
-	 */
-	public long daysSince(Date date) {
-
-		final double millisPerDay = 24 * 60 * 60 * 1000;
-		double millis = (new Date()).getTime() - date.getTime();
-
-		return Math.round(millis / millisPerDay);
+	public Date parse(String iso) {
+	    return iso == null ? null : Date.from(Instant.from(formatter.parse(iso)));
 	}
 }

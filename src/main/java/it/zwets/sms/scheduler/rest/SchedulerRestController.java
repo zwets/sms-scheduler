@@ -24,10 +24,18 @@ import org.springframework.web.server.ResponseStatusException;
 import it.zwets.sms.scheduler.Schedule;
 import it.zwets.sms.scheduler.SmsSchedulerService;
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
-import it.zwets.sms.scheduler.iam.IamService;
 
 /**
  * REST Controller for the /schedule endpoint
+ * 
+ * Provides for scheduling on the /schedule/{client} endpoints,
+ * and querying and canceling/deleting on three variables:
+ * <ul>
+ * <li><b>by-id</b>: on the unique process instance ID assigned by the server</li>
+ * <li><b>by-key</b>: on the optionally unique business key assigned by the client</li>
+ * <li><b>by-target</b>: on the target ID (semantically: the recipient) optionally assigned by the client</li>
+ * <li></li>
+ * </ul>
  */
 @RestController
 @RequestMapping(value = "/schedule")
@@ -39,18 +47,6 @@ public class SchedulerRestController {
     @Autowired
     private SmsSchedulerService theService;
 
-    @GetMapping(path = { "", "/" }, produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('admins') || hasRole('users')")
-    public List<SmsStatus> getRoot() {
-        LOG.trace("REST GET /schedule");
-        if (loginHasRole(IamService.ADMINS_GROUP)) {
-            return theService.getStatusList();
-        }
-        else {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Restricted to admins");
-        }
-    }
-
     @GetMapping(path = "{clientId}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public List<SmsStatus> getClient(@PathVariable String clientId) {
@@ -58,31 +54,43 @@ public class SchedulerRestController {
         return theService.getStatusList(clientId);
     }
 
-    @PostMapping(path = "{clientId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "{clientId}/by-id/{instanceId}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
-    public SmsStatus postClient(@PathVariable String clientId, @RequestBody Request req) {
-        LOG.trace("REST POST /schedule/{}", clientId);
-        return theService.scheduleSms(clientId, req.targetId, req.uniqueId, req.schedule, req.payload);
-    }
-    
-    @GetMapping(path = "{clientId}/{targetId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
-    public List<SmsStatus> getClientTarget(@PathVariable String clientId, @PathVariable String targetId) {
-        LOG.trace("REST GET /schedule/{}/{}", clientId, targetId);
-        return theService.getStatusList(clientId, targetId);
-    }
-
-    @GetMapping(path = "{clientId}/{targetId}/{uniqueId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
-    public SmsStatus getClientTargetUnique(@PathVariable String clientId, @PathVariable String targetId, @PathVariable String uniqueId) {
-        LOG.trace("REST GET /schedule/{}/{}/{}", clientId, targetId, uniqueId);
-        SmsStatus smsStatus = theService.getSmsStatus(clientId, targetId, clientId);
-        if (smsStatus == null) {
+    public SmsStatus getById(@PathVariable String clientId, @PathVariable String instanceId) {
+        LOG.trace("REST GET /schedule/{}/by-id/{}", clientId, instanceId);
+        
+        SmsStatus smsStatus = theService.getSmsStatus(instanceId);
+        if (smsStatus == null || !clientId.equals(smsStatus.client())) {
             throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
         }
         return smsStatus;
     }
+    
+    @GetMapping(path = "{clientId}/by-target/{targetId}")
+    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
+    public List<SmsStatus> getByTarget(@PathVariable String clientId, @PathVariable String targetId) {
+        LOG.trace("REST GET /schedule/{}/by-target/{}", clientId, targetId);
+        return theService.getStatusListByTarget(clientId, targetId);
+    }
+    
+    @GetMapping(path = "{clientId}/by-key/{clientKey}")
+    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
+    public List<SmsStatus> getByKey(@PathVariable String clientId, @PathVariable String clientKey) {
+        LOG.trace("REST GET /schedule/{}/by-key/{}", clientId, clientKey);
+        return theService.getStatusListByBusinessKey(clientId, clientKey);
+    }
 
+    /* Request from client; all fields except schedule and payload can be absent. */
+    private final record Request(String client, String target, String key, Schedule schedule, String payload) { }
+    
+    @PostMapping(path = "{clientId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
+    public SmsStatus postClient(@PathVariable String clientId, @RequestBody Request req) {
+        LOG.trace("REST POST /schedule/{}", clientId);
+        // TODO: check req.client == clientId
+        return theService.scheduleSms(clientId, req.target, req.key, req.schedule, req.payload);
+    }
+    
     @DeleteMapping(path = "{clientId}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public void deleteClient(@PathVariable String clientId, @RequestParam String confirm) {
@@ -109,12 +117,6 @@ public class SchedulerRestController {
         theService.cancelSms(clientId, targetId, uniqueId);
     }
 
-    private final record Request(
-        String targetId,
-        String uniqueId,
-        Schedule schedule,
-        String payload) { }
-    
     // Helpers
 
     private boolean loginIsUser(String id) {

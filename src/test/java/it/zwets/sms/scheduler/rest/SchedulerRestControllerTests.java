@@ -70,16 +70,4 @@ class SchedulerRestControllerTests {
                 .getForEntity("http://localhost:" + port + "/schedule", String.class);
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
-    
-    @Test
-    public void adminRequestOnRoot() {
-        ResponseEntity<String> response = rest.GET("admin", "test", "/schedule");
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-    }
-    
-    @Test
-    public void testRoot() {
-        ResponseEntity<String> response = rest.GET("/schedule");
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-    }
 }

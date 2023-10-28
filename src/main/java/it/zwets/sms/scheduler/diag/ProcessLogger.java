@@ -30,10 +30,10 @@ public class ProcessLogger implements ExecutionListener {
 	@Autowired
 	private VariableLogger variableDumper;
 
-	@Value("${sms.scheduler.diag.processes}")
+	@Value("${sms-scheduler.diag.processes}")
 	private boolean enabled;
 
-	@Value("${sms.scheduler.diag.processes.detailed}")
+	@Value("${sms-scheduler.diag.processes.detailed}")
 	private boolean detailed;
 
 	/**

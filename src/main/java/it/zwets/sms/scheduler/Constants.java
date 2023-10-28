@@ -15,7 +15,6 @@ public class Constants {
 
 	public static final String VAR_CLIENT_ID = "clientId";
 	public static final String VAR_TARGET_ID = "targetId";
-	public static final String VAR_UNIQUE_ID = "uniqueId";
 	public static final String VAR_SMS_SCHEDULE = "smsSchedule";
 	public static final String VAR_SMS_PAYLOAD = "smsPayload";
 	

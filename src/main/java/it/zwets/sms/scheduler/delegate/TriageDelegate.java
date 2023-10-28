@@ -28,7 +28,6 @@ public class TriageDelegate implements JavaDelegate {
 
         String clientId = execution.getVariable(Constants.VAR_CLIENT_ID, String.class);
         String targetId = execution.getVariable(Constants.VAR_TARGET_ID, String.class);
-        String uniqueId = execution.getVariable(Constants.VAR_UNIQUE_ID, String.class);
 
         Schedule smsSchedule = execution.getVariable(Constants.VAR_SMS_SCHEDULE, Schedule.class);
         String smsStatus = execution.hasVariable(Constants.VAR_SMS_STATUS)
@@ -52,7 +51,8 @@ public class TriageDelegate implements JavaDelegate {
         execution.setVariable(Constants.VAR_SMS_STATUS, smsStatus);
         execution.setVariable(Constants.VAR_SMS_RETRIES, smsRetries + 1);
 
-        LOG.info("Schedule SMS triaged: C:T:U:R:S:D {}:{}:{}:{}:{}:{}", clientId, targetId, uniqueId, smsRetries,
-                smsStatus, smsDueTime);
+        LOG.info("Schedule SMS triaged: I:C:T:B:R:S:D {}:{}:{}:{}:{}:{}", 
+                execution.getProcessInstanceId(), clientId, targetId, execution.getProcessInstanceBusinessKey(),
+                smsRetries, smsStatus, smsDueTime);
     }
 }
