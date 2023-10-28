@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
+import it.zwets.sms.scheduler.dto.Schedule;
 
 @SpringBootTest
 class SmsSchedulerServiceTests {
@@ -21,7 +22,7 @@ class SmsSchedulerServiceTests {
     private SmsSchedulerService service;
     
     @Test
-    void testScheduleSms() {
+    void testScheduleSmsEmptyClient() {
 
         Schedule schedule = new Schedule();
         long now = Instant.now().getEpochSecond();

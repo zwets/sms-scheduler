@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import it.zwets.sms.scheduler.Constants;
-import it.zwets.sms.scheduler.Schedule;
+import it.zwets.sms.scheduler.dto.Schedule;
 
 /**
  * Triages incoming SMS schedule request and retries.

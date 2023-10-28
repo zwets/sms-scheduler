@@ -21,9 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
 
-import it.zwets.sms.scheduler.Schedule;
 import it.zwets.sms.scheduler.SmsSchedulerService;
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
+import it.zwets.sms.scheduler.dto.Schedule;
 
 /**
  * REST Controller for the /schedule endpoint

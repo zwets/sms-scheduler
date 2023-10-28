@@ -8,8 +8,9 @@ import org.flowable.engine.delegate.DelegateExecution;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import it.zwets.sms.scheduler.Constants;
-import it.zwets.sms.scheduler.Schedule;
+import it.zwets.sms.scheduler.dto.Schedule;
+
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 
 /**
  * Initialises the SmsSchedulerProcess process variables.

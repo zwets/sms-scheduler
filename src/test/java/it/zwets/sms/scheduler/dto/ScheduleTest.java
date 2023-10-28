@@ -1,4 +1,4 @@
-package it.zwets.sms.scheduler;
+package it.zwets.sms.scheduler.dto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -8,6 +8,8 @@ import java.time.Instant;
 import java.util.NoSuchElementException;
 
 import org.junit.jupiter.api.Test;
+
+import it.zwets.sms.scheduler.dto.Schedule.Slot;
 
 class ScheduleTest {
 

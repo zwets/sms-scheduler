@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import it.zwets.sms.scheduler.dto.Schedule;
+
 @SpringBootTest
 class ServerApplicationTests {
     
