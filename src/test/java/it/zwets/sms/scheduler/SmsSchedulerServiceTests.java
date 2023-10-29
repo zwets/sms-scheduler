@@ -27,9 +27,8 @@ class SmsSchedulerServiceTests {
 
         long now = Instant.now().getEpochSecond();
         Slot[] slots = new Slot[] { new Slot(now+20, now+30), new Slot(now, now+10) };
-        Schedule schedule = new Schedule(slots);
         
-        SmsStatus s = service.scheduleSms("client", "target", "bizkey", schedule, "DUMMY PAYLOAD");
+        SmsStatus s = service.scheduleSms("client", "target", "bizkey", slots, "DUMMY PAYLOAD");
         LOG.debug("id: {}, client: {}, target: {}, key: {}, status: {}, started: {}, ended: {}, retries: {}",
                 s.id(), s.client(), s.target(), s.key(), s.status(), s.started(), s.ended(), s.retries());
         

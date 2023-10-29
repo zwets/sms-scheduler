@@ -48,6 +48,7 @@ public class TriageDelegate implements JavaDelegate {
         execution.setVariable(Constants.VAR_SMS_DUETIME, smsDueTime);
         execution.setVariable(Constants.VAR_SMS_STATUS, smsStatus);
         execution.setVariable(Constants.VAR_SMS_RETRIES, smsRetries + 1);
+        execution.setVariable(Constants.VAR_CORREL_ID, execution.getProcessInstanceId());
 
         LOG.info("Schedule SMS triaged: I:C:T:B:R:S:D {}:{}:{}:{}:{}:{}", 
                 execution.getProcessInstanceId(), clientId, targetId, execution.getProcessInstanceBusinessKey(),

@@ -1,5 +1,6 @@
 package it.zwets.sms.scheduler;
 
+import java.time.Duration;
 import java.time.ZoneOffset;
 
 import org.flowable.engine.RuntimeService;
@@ -35,10 +36,12 @@ public class SmsSchedulerConfiguration {
         
         public static final String APP_PROCESS_NAME = "smsSchedulerProcess";
         
-        // Variable names
+        // Variable names (set on the process instance)
 
         public static final String VAR_CLIENT_ID = "clientId";
         public static final String VAR_TARGET_ID = "targetId";
+        public static final String VAR_CORREL_ID = "correlId";
+
         public static final String VAR_SMS_SCHEDULE = "smsSchedule";
         public static final String VAR_SMS_PAYLOAD = "smsPayload";
         
@@ -46,7 +49,13 @@ public class SmsSchedulerConfiguration {
         public static final String VAR_SMS_STATUS = "smsStatus";
         public static final String VAR_SMS_RETRIES = "smsRetries";
         
-        // Values for VAR_SMS_STATUS
+ 
+        // Configuration expressions (getters below)
+        
+        public static final String CFG_ACK_SEND_TIMEOUT = "ackSendTimeout";
+        public static final String CFG_ACK_RECV_TIMEOUT = "ackRecvTimeout";
+        
+        // Values for the VAR_SMS_STATUS variable
         
         public static final String SMS_STATUS_NEW = "NEW"; // TODO: remove or replace
         public static final String SMS_STATUS_SCHEDULED = "SCHEDULED";
@@ -54,11 +63,26 @@ public class SmsSchedulerConfiguration {
         public static final String SMS_STATUS_EXPIRED = "EXPIRED";
         public static final String SMS_STATUS_SENT = "SENT";
         public static final String SMS_STATUS_DELIVERED = "DELIVERED";
+        
+        // Channel and event names (tied to the *.event and *.channel definitions)
+        
+//        public static final String CHANNEL_SCHEDULE_SMS = "scheduleSmsChannel"; // inbound TODO
+//        public static final String EVENT_KEY_SCHEDULE_SMS = "scheduleSmsEvent"; // inbound TODO
+        public static final String CHANNEL_SEND_SMS = "sendSmsChannel";
+        public static final String EVENT_KEY_SEND_SMS = "sendSmsEvent";
+        public static final String CHANNEL_SMS_STATUS = "smsStatusChannel";
+        public static final String EVENT_KEY_SMS_STATUS = "smsStatusEvent";
     }
 
 
     @Value("${sms.scheduler.app.time-zone:Z}")
     private String appTimeZone;
+    
+    @Value("${sms.scheduler.config.ack-send-timeout}")
+    private Duration ackSendTimeout;
+
+    @Value("${sms.scheduler.config.ack-recv-timeout}")
+    private Duration ackRecvTimeout;
 
     @Value("${sms.scheduler.diag.processes.enabled:false}")
     private boolean diagProcessesEnabled;
@@ -99,6 +123,22 @@ public class SmsSchedulerConfiguration {
     @Bean
     public TriageDelegate triageDelegate() {
         return new TriageDelegate();
+    }
+    
+    /**
+     * Timeout expression for the initial send acknowledgement border condition
+     * @return a period defined in the application properties sms.scheduler.config.ack-send-timeout
+     */
+    public Duration getAckSendTimeout() {
+        return ackSendTimeout;
+    }
+
+    /**
+     * Timeout expression for the wait for the delivery acknowledgement timer
+     * @return a period defined by the application property sms.scheduler.config.ack-recv-timeout
+     */
+    public Duration getAckRecvTimeout() {
+        return ackRecvTimeout;
     }
     
     @Bean

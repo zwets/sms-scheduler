@@ -16,6 +16,6 @@ CLIENT="${1:-test}"
 TARGET="${2:-target1}"
 BIZKEY="${3:-id$$}"
 PAYLOAD="${4:-Dummy payload}"
-(($# > 4)) && shift 4 && SCHEDULE="$*" || SCHEDULE="$NOW $((NOW+10)) $((NOW+20)) $((NOW+30))"
+(($# > 4)) && shift 4 && ARGS="$*" || ARGS="$NOW $((NOW+10)) $((NOW+20)) $((NOW+30))"
 
-exec "$(dirname "$0")/schedule-sms" "$CLIENT" "$TARGET" "$BIZKEY" "$PAYLOAD" $SCHEDULE
+exec "$(dirname "$0")/schedule-sms" "$CLIENT" "$TARGET" "$BIZKEY" "$PAYLOAD" $ARGS

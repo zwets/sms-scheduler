@@ -1,5 +1,5 @@
 {
-  "key": "sms-status",
+  "key": "smsStatusEvent",
   "name": "SMS Status",
   "inboundChannelKeys": [
     "smsStatusChannel"

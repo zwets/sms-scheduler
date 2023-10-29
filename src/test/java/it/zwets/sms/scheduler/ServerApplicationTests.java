@@ -40,9 +40,8 @@ class ServerApplicationTests {
 		
         long now = Instant.now().getEpochSecond();
         Slot[] slots = new Slot[] { new Slot(now+20, now+30), new Slot(now, now+10) };
-        Schedule schedule = new Schedule(slots);
 
-		smsSchedulerService.scheduleSms("client-id", "target-id", "unique-id", schedule, "DUMMY PAYLOAD");
+		smsSchedulerService.scheduleSms("client-id", "target-id", "unique-id", slots, "DUMMY PAYLOAD");
 		assertEquals(1, runtimeService.createProcessInstanceQuery().count());
 	}
 }

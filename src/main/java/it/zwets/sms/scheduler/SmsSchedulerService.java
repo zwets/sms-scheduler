@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 import it.zwets.sms.scheduler.dto.Schedule;
+import it.zwets.sms.scheduler.dto.Slot;
 import it.zwets.sms.scheduler.util.DateHelper;
 
 @Service
@@ -43,22 +44,22 @@ public class SmsSchedulerService {
      * @param clientId the client we are operating for
      * @param targetId optional client identification of the target (recipient)
      * @param clientKey optionally unique ID assigned by the client
-     * @param schedule the time slots within which sending is desired
+     * @param slots the time slots within which sending is desired
      * @param payload the encrypted payload to forward on the send queue
      * @return SmsStatus object with the incoming parameter plus assigned unique id and start time
      */
 	@Transactional
     public SmsStatus scheduleSms(
     		String clientId, String targetId, String businessKey, 
-    		Schedule schedule, String payload) {
+    		Slot[] slots, String payload) {
 
-		LOG.debug("SmsSchedulerService::scheduleSms({},{},{},{},{})", clientId, targetId, businessKey, schedule, payload);
+		LOG.debug("SmsSchedulerService::scheduleSms({},{},{},{},{})", clientId, targetId, businessKey, slots, payload);
 		
 		Map<String,Object> vars = new HashMap<String,Object>();
 		
 		vars.put(Constants.VAR_CLIENT_ID, clientId);
 		vars.put(Constants.VAR_TARGET_ID, targetId);
-		vars.put(Constants.VAR_SMS_SCHEDULE, schedule);
+		vars.put(Constants.VAR_SMS_SCHEDULE, new Schedule(slots));
 		vars.put(Constants.VAR_SMS_PAYLOAD, payload);
 
 		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.APP_PROCESS_NAME, businessKey, vars);
