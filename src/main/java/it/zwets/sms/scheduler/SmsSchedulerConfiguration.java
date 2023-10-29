@@ -28,61 +28,22 @@ import it.zwets.sms.scheduler.util.DateHelper;
 @Configuration(proxyBeanMethods = false)
 public class SmsSchedulerConfiguration {
     
-    private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerConfiguration.class);
-    
-    public static final class Constants {
-
-        // Process names and globals
-        
-        public static final String APP_PROCESS_NAME = "smsSchedulerProcess";
-        
-        // Variable names (set on the process instance)
-
-        public static final String VAR_CLIENT_ID = "clientId";
-        public static final String VAR_TARGET_ID = "targetId";
-        public static final String VAR_CORREL_ID = "correlId";
-
-        public static final String VAR_SMS_SCHEDULE = "smsSchedule";
-        public static final String VAR_SMS_PAYLOAD = "smsPayload";
-        
-        public static final String VAR_SMS_DUETIME = "smsDueTime";
-        public static final String VAR_SMS_STATUS = "smsStatus";
-        public static final String VAR_SMS_RETRIES = "smsRetries";
-        
- 
-        // Configuration expressions (getters below)
-        
-        public static final String CFG_ACK_SEND_TIMEOUT = "ackSendTimeout";
-        public static final String CFG_ACK_RECV_TIMEOUT = "ackRecvTimeout";
-        
-        // Values for the VAR_SMS_STATUS variable
-        
-        public static final String SMS_STATUS_NEW = "NEW"; // TODO: remove or replace
-        public static final String SMS_STATUS_SCHEDULED = "SCHEDULED";
-        public static final String SMS_STATUS_ENROUTE = "ENROUTE";
-        public static final String SMS_STATUS_EXPIRED = "EXPIRED";
-        public static final String SMS_STATUS_SENT = "SENT";
-        public static final String SMS_STATUS_DELIVERED = "DELIVERED";
-        
-        // Channel and event names (tied to the *.event and *.channel definitions)
-        
-//        public static final String CHANNEL_SCHEDULE_SMS = "scheduleSmsChannel"; // inbound TODO
-//        public static final String EVENT_KEY_SCHEDULE_SMS = "scheduleSmsEvent"; // inbound TODO
-        public static final String CHANNEL_SEND_SMS = "sendSmsChannel";
-        public static final String EVENT_KEY_SEND_SMS = "sendSmsEvent";
-        public static final String CHANNEL_SMS_STATUS = "smsStatusChannel";
-        public static final String EVENT_KEY_SMS_STATUS = "smsStatusEvent";
-    }
-
+    private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerConfiguration.class);    
 
     @Value("${sms.scheduler.app.time-zone:Z}")
     private String appTimeZone;
     
+    @Value("${sms.scheduler.config.max-add-jitter}")
+    private Duration maxAddJitter;
+
     @Value("${sms.scheduler.config.ack-send-timeout}")
     private Duration ackSendTimeout;
 
     @Value("${sms.scheduler.config.ack-recv-timeout}")
     private Duration ackRecvTimeout;
+
+    @Value("${sms.scheduler.config.wait-after-fail}")
+    private Duration waitAfterFail;
 
     @Value("${sms.scheduler.diag.processes.enabled:false}")
     private boolean diagProcessesEnabled;
@@ -122,7 +83,7 @@ public class SmsSchedulerConfiguration {
     
     @Bean
     public TriageDelegate triageDelegate() {
-        return new TriageDelegate();
+        return new TriageDelegate(waitAfterFail, maxAddJitter);
     }
     
     /**
@@ -155,5 +116,51 @@ public class SmsSchedulerConfiguration {
     @Bean
     public TaskLogger taskLogger() {
         return new TaskLogger(new VariableLogger(runtimeService), diagTasksEnabled, diagTasksDetailed);
+    }
+
+    /**
+     * Defines as constants the string names and values used in the model.
+     */
+    public static final class Constants {
+
+        // Process names and globals
+        
+        public static final String APP_PROCESS_NAME = "smsSchedulerProcess";
+        
+        // Variable names (set on the process instance)
+
+        public static final String VAR_CLIENT_ID = "clientId";
+        public static final String VAR_TARGET_ID = "targetId";
+        //public static final String VAR_CLIENT_KEY = not a variable, is businessKey
+        public static final String VAR_SCHEDULE = "schedule";
+        public static final String VAR_PAYLOAD = "payload";
+        
+        public static final String VAR_SMS_DUETIME = "smsDueTime";
+        public static final String VAR_SMS_DEADLINE = "smsDeadline";
+        public static final String VAR_SMS_STATUS = "smsStatus";
+        public static final String VAR_SMS_RETRIES = "smsRetries";
+ 
+        // Configuration expressions (getters below)
+        
+        public static final String CFG_ACK_SEND_TIMEOUT = "ackSendTimeout";
+        public static final String CFG_ACK_RECV_TIMEOUT = "ackRecvTimeout";
+        
+        // Values for the VAR_SMS_STATUS variable
+        
+        public static final String SMS_STATUS_NEW = "NEW"; // TODO: remove or replace
+        public static final String SMS_STATUS_SCHEDULED = "SCHEDULED";
+        public static final String SMS_STATUS_ENROUTE = "ENROUTE";
+        public static final String SMS_STATUS_EXPIRED = "EXPIRED";
+        public static final String SMS_STATUS_SENT = "SENT";
+        public static final String SMS_STATUS_DELIVERED = "DELIVERED";
+        
+        // Channel and event names (tied to the *.event and *.channel definitions)
+        
+        public static final String CHANNEL_SCHEDULE_SMS = "scheduleSmsChannel";
+        public static final String EVENT_KEY_SCHEDULE_SMS = "scheduleSmsEvent";
+        public static final String CHANNEL_SEND_SMS = "sendSmsChannel";
+        public static final String EVENT_KEY_SEND_SMS = "sendSmsEvent";
+        public static final String CHANNEL_SMS_STATUS = "smsStatusChannel";
+        public static final String EVENT_KEY_SMS_STATUS = "smsStatusEvent";
     }
 }

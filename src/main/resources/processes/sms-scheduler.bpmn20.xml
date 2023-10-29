@@ -27,9 +27,9 @@
       <extensionElements>
         <flowable:eventType><![CDATA[sendSmsEvent]]></flowable:eventType>
         <flowable:triggerEventType><![CDATA[smsStatusEvent]]></flowable:triggerEventType>
-        <flowable:eventInParameter sourceExpression="${correlId}" target="correlId" targetType="string"></flowable:eventInParameter>
-        <flowable:eventInParameter sourceExpression="${clientId}" target="clientId" targetType="string"></flowable:eventInParameter>
-        <flowable:eventInParameter sourceExpression="${smsPayload}" target="message" targetType="string"></flowable:eventInParameter>
+        <flowable:eventInParameter sourceExpression="${execution.processInstanceId}" target="correl-id" targetType="string"></flowable:eventInParameter>
+        <flowable:eventInParameter sourceExpression="${clientId}" target="client-id" targetType="string"></flowable:eventInParameter>
+        <flowable:eventInParameter sourceExpression="${payload}" target="payload" targetType="string"></flowable:eventInParameter>
         <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:channelKey xmlns:flowable="http://flowable.org/bpmn"><![CDATA[sendSmsChannel]]></flowable:channelKey>
@@ -61,10 +61,18 @@ RECV">
       </extensionElements>
     </intermediateCatchEvent>
     <exclusiveGateway id="orGwy3" default="retryLoop"></exclusiveGateway>
-    <startEvent id="startEvent">
+    <startEvent id="eventStart" name="REQUEST" isInterrupting="true">
       <extensionElements>
         <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
+        <flowable:eventType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[scheduleSmsEvent]]></flowable:eventType>
+        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="client" sourceType="string" target="clientId"></flowable:eventOutParameter>
+        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="target" sourceType="string" target="targetId"></flowable:eventOutParameter>
+        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="key" sourceType="string" target="businessKey"></flowable:eventOutParameter>
+        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="schedule" sourceType="string" target="schedule"></flowable:eventOutParameter>
+        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="message" sourceType="string" target="payload"></flowable:eventOutParameter>
+        <flowable:channelKey xmlns:flowable="http://flowable.org/bpmn"><![CDATA[scheduleSmsChannel]]></flowable:channelKey>
+        <flowable:channelType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[kafka]]></flowable:channelType>
       </extensionElements>
     </startEvent>
     <endEvent id="endExpired" name="EXPIRED">
@@ -105,7 +113,6 @@ RECV">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "SENT"}]]></conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="fromAck2" sourceRef="recvAckRecv" targetRef="orGwy3"></sequenceFlow>
-    <sequenceFlow id="toTriage" sourceRef="startEvent" targetRef="triageService"></sequenceFlow>
     <sequenceFlow id="fromTriage" sourceRef="triageService" targetRef="orGwy1"></sequenceFlow>
     <sequenceFlow id="toScheduled" sourceRef="orGwy1" targetRef="schedulerTimer"></sequenceFlow>
     <sequenceFlow id="toExpired" sourceRef="orGwy1" targetRef="endExpired">
@@ -133,6 +140,7 @@ RECV">
         <flowable:executionListener event="take" expression="${execution.setVariable(&quot;smsStatus&quot;,&quot;ENROUTE&quot;)}"></flowable:executionListener>
       </extensionElements>
     </sequenceFlow>
+    <sequenceFlow id="toTriage" sourceRef="eventStart" targetRef="triageService"></sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_smsSchedulerProcess">
     <bpmndi:BPMNPlane bpmnElement="smsSchedulerProcess" id="BPMNPlane_smsSchedulerProcess">
@@ -163,7 +171,7 @@ RECV">
       <bpmndi:BPMNShape bpmnElement="orGwy3" id="BPMNShape_orGwy3">
         <omgdc:Bounds height="40.0" width="40.0" x="781.625" y="98.8125"></omgdc:Bounds>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="startEvent" id="BPMNShape_startEvent">
+      <bpmndi:BPMNShape bpmnElement="eventStart" id="BPMNShape_eventStart">
         <omgdc:Bounds height="30.0" width="30.5" x="29.75" y="103.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="endExpired" id="BPMNShape_endExpired">

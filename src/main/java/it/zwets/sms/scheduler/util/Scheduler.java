@@ -1,4 +1,4 @@
-package it.zwets.sms.scheduler.dto;
+package it.zwets.sms.scheduler.util;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -8,35 +8,34 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Schedule is a list of zero or more time slots.
+ * Scheduler manages a schedule which is a list of zero or more time slots.
  * 
- * The time slots are ordered and non-overlapping.
+ * Scheduler orders and merges the slots upon construction.
  * 
  * @author zwets
  */
-public final class Schedule implements Serializable {
+public final class Scheduler implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
 	private final Slot[] slots;
 	
 	/**
-	 * Create an empty schedule
+	 * Create a scheduler with an empty schedule
 	 */
-	public Schedule() {
+	public Scheduler() {
 	    this.slots = new Slot[0];
 	}
 
 	/**
-	 * Create a schedule from an array of slots
-	 * @param slots array of Slots
+	 * Create a scheduler with an array of slots
+	 * @param slots array of Slots, will be ordered and merged
 	 */
-	public Schedule(Slot[] slots) {
+	public Scheduler(Slot[] slots) {
 	    List<Slot> list = new ArrayList<Slot>();
 	    for (Slot s : slots) {
 	        list = addSlot(list, s.from, s.till);
@@ -45,23 +44,34 @@ public final class Schedule implements Serializable {
 	}
 
 	/**
-	 * 
-	 * @return
+	 * Create a scheduler from a string representation of a list of slots
+	 * @param schedule a semicolon-separated string as produced by toString
 	 */
+    public Scheduler(String schedule) {
+        List<Slot> list = new ArrayList<Slot>();
+        try (Scanner scanner = new Scanner(schedule)) {
+            scanner.useDelimiter(";");
+            while (scanner.hasNext()) {
+                Slot s = Slot.parse(scanner.next());
+                list = addSlot(list, s.from, s.till);
+            }
+        }
+        this.slots = list.toArray(Slot[]::new);
+    }
+    
+    /**
+     * Getter for the array of slots
+     * @return
+     */
     public Slot[] getSlots() {
         return slots;
     }
 
-    /**
-     * Get the first available time in the schedule that is no earlier than <code>earliest</code>.
-     * 
-     * @param earliest the time (in seconds since the Epoch) to start searching from
-     * @return null or the first available time in the schedule that is not before earliest
-     */
-    public Long getFirstAvailable(long earliest) {
+    /* Private helper to get first slot that either contains from or is after it. */
+    private Slot getFirstAvailableSlot(long from) {
         for (Slot s : slots) {
-            if (earliest < s.till) {
-                return s.from > earliest ? s.from : earliest;
+            if (from < s.till) {
+                return s;
             }
         }
         return null;
@@ -82,15 +92,28 @@ public final class Schedule implements Serializable {
      * @return the earliest instant at or after <code>from</code> which falls in a slot, or <code>null</code> if none.
      */
     public Instant getFirstAvailableInstant(Instant from) {
-        Long earliest = getFirstAvailable(from.getEpochSecond());
-        return earliest == null ? null : Instant.ofEpochSecond(earliest.longValue());
+        Instant result = null;
+        if (from != null) {
+            long earliest = from.getEpochSecond();
+            Slot s = getFirstAvailableSlot(earliest);
+            result = s == null ? null : Instant.ofEpochSecond(earliest < s.from ? s.from : earliest);
+        }
+        return result;
     }
 
-    /* Private constructor that takes a list produced by #addList,
-     * i.e. a list of slots which is already in correct order.
+    /**
+     * Get the end of the first available slot for instant from.
+     * @param from the instant to start looking for
+     * @return the end of the slot containing <code>from</code>, or <code>null</code> if none.
      */
-    private Schedule(List<Slot> list) {
-        this.slots = list.toArray(Slot[]::new);
+    public Instant getDeadlineInstant(Instant from) {
+        Instant result = null;
+        if (from != null) {
+            long after = from.getEpochSecond();
+            Slot s = getFirstAvailableSlot(after);
+            result = s == null ? null : Instant.ofEpochSecond(s.till);
+        }
+        return result;
     }
     
     /* Private static method to add a slot to a list, keeping the list
@@ -129,38 +152,21 @@ public final class Schedule implements Serializable {
         return result;
 	}
 	
-    /**
-     * Parse a schedule from its toString representation
-     * @param str
-     * @return a new Schedule object or RuntimeException
-     */
-    public static Schedule parse(String str) {
-        List<Slot> slots = new ArrayList<Slot>();
-        try (Scanner scanner = new Scanner(str)) {
-            scanner.useDelimiter(";");
-            while (scanner.hasNext()) {
-                Slot s = Slot.parse(scanner.next());
-                slots = addSlot(slots, s.from, s.till);
-            }
-        }
-        return new Schedule(slots);
-    }
-    
 	@Override
 	public String toString() {
 		return Arrays.stream(slots).map(Slot::toString).collect(Collectors.joining(";"));
 	}
 
 	/**
-	 * Parse a schedule from its toString representation
-	 * @param str
+	 * Parse a schedule from its JSON representation
+	 * @param json
 	 * @return a new Schedule object or RuntimeException
 	 */
-	public static Schedule parseJson(String json) {
+	public static Scheduler parseJson(String json) {
 	    try {
 	        ObjectMapper mapper = new ObjectMapper();
             Slot[] slots = mapper.readerFor(Slot[].class).readValue(json);
-            return new Schedule(slots);
+            return new Scheduler(slots);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to parse JSON array of Slots");
         }
@@ -177,21 +183,5 @@ public final class Schedule implements Serializable {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to convert to JSON array of Slots");
         }
-	}
-
-	/**
-	 * Old way. Remove if the above works.
-	 * @return
-	 */
-	public String manualToJson() {
-	    StringBuffer b = new StringBuffer();
-	    b.append('[');
-	    for (int i = 0; i < slots.length; ++i) {
-	        if (i > 0) b.append(',');
-	        b.append(' ');
-	        b.append(slots[i].toJson());
-	    }
-	    b.append(" ]");
-	    return b.toString();
 	}
 }

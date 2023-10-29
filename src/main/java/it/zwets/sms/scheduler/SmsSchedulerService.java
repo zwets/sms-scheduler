@@ -16,8 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
-import it.zwets.sms.scheduler.dto.Schedule;
-import it.zwets.sms.scheduler.dto.Slot;
 import it.zwets.sms.scheduler.util.DateHelper;
 
 @Service
@@ -50,17 +48,16 @@ public class SmsSchedulerService {
      */
 	@Transactional
     public SmsStatus scheduleSms(
-    		String clientId, String targetId, String businessKey, 
-    		Slot[] slots, String payload) {
+    		String clientId, String targetId, String businessKey, String schedule, String payload) {
 
-		LOG.debug("SmsSchedulerService::scheduleSms({},{},{},{},{})", clientId, targetId, businessKey, slots, payload);
+		LOG.debug("SmsSchedulerService::scheduleSms({},{},{},{},{})", clientId, targetId, businessKey, schedule, payload);
 		
 		Map<String,Object> vars = new HashMap<String,Object>();
 		
 		vars.put(Constants.VAR_CLIENT_ID, clientId);
 		vars.put(Constants.VAR_TARGET_ID, targetId);
-		vars.put(Constants.VAR_SMS_SCHEDULE, new Schedule(slots));
-		vars.put(Constants.VAR_SMS_PAYLOAD, payload);
+		vars.put(Constants.VAR_SCHEDULE, schedule);
+		vars.put(Constants.VAR_PAYLOAD, payload);
 
 		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.APP_PROCESS_NAME, businessKey, vars);
 		

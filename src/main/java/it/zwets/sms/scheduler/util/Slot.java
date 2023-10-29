@@ -1,4 +1,4 @@
-package it.zwets.sms.scheduler.dto;
+package it.zwets.sms.scheduler.util;
 
 import java.io.Serializable;
 import java.time.Instant;

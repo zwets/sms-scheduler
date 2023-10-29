@@ -23,7 +23,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import it.zwets.sms.scheduler.SmsSchedulerService;
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
-import it.zwets.sms.scheduler.dto.Slot;
 
 /**
  * REST Controller for the /schedule endpoint
@@ -81,7 +80,7 @@ public class SchedulerRestController {
     }
 
     /* Request from client; all fields except schedule and payload can be absent. */
-    private final record Request(String client, String target, String key, Slot[] schedule, String payload) { }
+    private final record Request(String client, String target, String key, String schedule, String payload) { }
     
     @PostMapping(path = "{clientId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")

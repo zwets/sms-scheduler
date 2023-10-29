@@ -54,9 +54,9 @@ public class TaskLogger implements TaskListener {
 		if (enabled && LOG.isInfoEnabled()) {
 
 			LOG.info("Task at D:P:X:T:K:N/E {}:{}:{}:{}:{}:{}/{}", 
-				StringUtils.substringBefore(task.getProcessDefinitionId(),":"),
-				task.getProcessInstanceId(),
-				task.getExecutionId(),
+				StringUtils.substringBefore(task.getProcessDefinitionId(), ':'),
+				StringUtils.substringBefore(task.getProcessInstanceId(), '-'),
+				StringUtils.substringBefore(task.getExecutionId(), '-'),
 				task.getId(),
 				task.getTaskDefinitionKey(),
 				task.getName(),

@@ -5,11 +5,12 @@
     "sendSmsChannel"
   ],
   "correlationParameters": [
-    { "name": "correlId", "type": "string" }
+    { "name": "correl-id", "type": "string" }
   ],
   "payload": [
-    { "name": "correlId", "type": "string" },
-    { "name": "clientId", "type": "string" },
+    { "name": "correl-id", "type": "string" },
+    { "name": "client-id", "type": "string" },
+    { "name": "deadline", "type": "string" },
     { "name": "message", "type": "string" }
   ]
 }

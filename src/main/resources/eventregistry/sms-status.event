@@ -5,12 +5,12 @@
     "smsStatusChannel"
   ],
   "correlationParameters": [
-    { "name": "correlId", "type": "string" }
+    { "name": "correl-id", "type": "string" }
   ],
   "payload": [
-    { "name": "correlId", "type": "string" },
-    { "name": "status", "type": "string" },
-    { "name": "errorCode", "type": "integer" },
-    { "name": "errorDescription", "type": "string" }
+    { "name": "correl-id", "type": "string" },
+    { "name": "sms-status", "type": "string" },
+    { "name": "error-code", "type": "integer" },
+    { "name": "error-description", "type": "string" }
   ]
 }

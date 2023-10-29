@@ -32,15 +32,15 @@ public class VariableLogger {
 	
 	private void dumpVariableInstance(VariableInstance var) {
 		if (LOG.isInfoEnabled()) {
-			LOG.info("{} = {} ({}/{}:{}:{})", 
-				var.getName(), var.getValue(), var.getTypeName(), 
-				var.getProcessInstanceId(), var.getExecutionId(), var.getTaskId());
+			LOG.info("- {} = {} ({})", 
+				var.getName(), var.getValue(), var.getTypeName());
+//				var.getProcessInstanceId(), var.getExecutionId(), var.getTaskId());
 		}
 	}
 	
 	public void dumpExecutionVariables(String executionId) {
 		if (LOG.isInfoEnabled()) {
-			LOG.info("EXECUTION[{}] VARIABLES", executionId);
+			//LOG.info("EXECUTION[{}] VARIABLES", executionId);
 			Map<String, VariableInstance> vars = runtimeService.getVariableInstances(executionId);
 			for (VariableInstance var : vars.values()) {
 				dumpVariableInstance(var);
@@ -50,7 +50,7 @@ public class VariableLogger {
 	
 	public void dumpDelegateExecutionVariables(DelegateExecution execution) {
 		if (LOG.isInfoEnabled()) {
-			LOG.info("DELEGATE-EXECUTION[{}] VARIABLES", execution.getId());
+			//LOG.info("DELEGATE-EXECUTION[{}] VARIABLES", execution.getId());
 			Map<String,VariableInstance> vars = execution.getVariableInstances();
 			for (VariableInstance var : vars.values()) {
 				dumpVariableInstance(var);
@@ -60,7 +60,7 @@ public class VariableLogger {
 
 	public void dumpDelegateTaskVariables(DelegateTask task) {
 		if (LOG.isInfoEnabled()) {
-			LOG.info("DELEGATE-TASK[{}] VARIABLES", task.getId());
+			//LOG.info("DELEGATE-TASK[{}] VARIABLES", task.getId());
 			Map<String,VariableInstance> vars = task.getVariableInstances();
 			for (VariableInstance var : vars.values()) {
 				dumpVariableInstance(var);
