@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import it.zwets.sms.scheduler.dto.Schedule;
+import it.zwets.sms.scheduler.dto.Slot;
 
 @SpringBootTest
 class ServerApplicationTests {
@@ -37,11 +38,10 @@ class ServerApplicationTests {
 	@Test
 	void serviceScheduleSmsTest() {
 		
-		Schedule schedule = new Schedule();
-		long now = Instant.now().getEpochSecond();
-		schedule.addSlot(now + 20, now + 30);
-		schedule.addSlot(now, now + 10);
-		
+        long now = Instant.now().getEpochSecond();
+        Slot[] slots = new Slot[] { new Slot(now+20, now+30), new Slot(now, now+10) };
+        Schedule schedule = new Schedule(slots);
+
 		smsSchedulerService.scheduleSms("client-id", "target-id", "unique-id", schedule, "DUMMY PAYLOAD");
 		assertEquals(1, runtimeService.createProcessInstanceQuery().count());
 	}

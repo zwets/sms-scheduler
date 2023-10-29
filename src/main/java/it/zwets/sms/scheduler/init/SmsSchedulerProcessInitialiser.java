@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import it.zwets.sms.scheduler.dto.Schedule;
 
-import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
+import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 
 /**
  * Initialises the SmsSchedulerProcess process variables.

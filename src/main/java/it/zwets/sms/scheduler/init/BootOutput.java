@@ -5,7 +5,7 @@ import org.flowable.engine.RuntimeService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
+import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 
 /**
  * Special kind of Spring Bean, gets executed when a Spring Boot application boots.

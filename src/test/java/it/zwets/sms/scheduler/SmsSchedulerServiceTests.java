@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
 import it.zwets.sms.scheduler.dto.Schedule;
+import it.zwets.sms.scheduler.dto.Slot;
 
 @SpringBootTest
 class SmsSchedulerServiceTests {
@@ -24,10 +25,9 @@ class SmsSchedulerServiceTests {
     @Test
     void testScheduleSmsEmptyClient() {
 
-        Schedule schedule = new Schedule();
         long now = Instant.now().getEpochSecond();
-        schedule.addSlot(now + 20, now + 30);
-        schedule.addSlot(now, now + 10);
+        Slot[] slots = new Slot[] { new Slot(now+20, now+30), new Slot(now, now+10) };
+        Schedule schedule = new Schedule(slots);
         
         SmsStatus s = service.scheduleSms("client", "target", "bizkey", schedule, "DUMMY PAYLOAD");
         LOG.debug("id: {}, client: {}, target: {}, key: {}, status: {}, started: {}, ended: {}, retries: {}",

@@ -15,10 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 import it.zwets.sms.scheduler.dto.Schedule;
 import it.zwets.sms.scheduler.util.DateHelper;
-
-import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 
 @Service
 public class SmsSchedulerService {
