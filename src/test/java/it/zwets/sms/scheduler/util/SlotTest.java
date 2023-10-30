@@ -74,6 +74,20 @@ class SlotTest {
         assertEquals(10, s.from);
         assertEquals(20, s.till);
     }
+    
+    @Test
+    void testParseISO() {
+        String str = "2023-10-30T07:32:50+03:00/2023-10-30T04:35:50Z";
+        Slot s = Slot.parse(str);
+        assertEquals(Instant.parse("2023-10-30T07:32:50+03:00").toEpochMilli()/1000, s.from);
+        assertEquals(Instant.parse("2023-10-30T04:35:50Z").toEpochMilli()/1000, s.till);
+    }
+
+    @Test
+    void testFailParseISOWithoutZoneOffset() {
+        String str = "2023-10-30T07:32:50/2023-10-30T04:35:50Z";
+        assertThrows(Exception.class, () -> Slot.parse(str));
+    }
 
     @Test
     void testToJson() {

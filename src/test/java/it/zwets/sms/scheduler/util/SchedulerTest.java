@@ -24,7 +24,7 @@ class SchedulerTest {
 	}
 	
 	@Test
-	void testParseText() {
+	void testParseString() {
 	    Scheduler s = makeScheduler(10, 20, 30, 35, 40, 60);
 	    assertEquals("10-20;30-35;40-60", s.toString());
 	    Scheduler n = new Scheduler("10-20;30-35;40-60");
@@ -32,8 +32,18 @@ class SchedulerTest {
                 assertEquals(s.getSlots()[i].getFrom(), n.getSlots()[i].getFrom());
             }
 	}
-	
-    @Test
+
+	@Test
+	void testParseIsoString() {
+	    String schedStr = "2023-10-30T07:32:00+03:00/2023-10-30T06:32:10+02:00;2023-10-30T05:32:20+01:00/2023-10-30T04:32:30+00:00";
+	    Scheduler s = new Scheduler(schedStr);
+	    long start = s.getSlots()[0].from;
+	    assertEquals(start + 10, s.getSlots()[0].till);
+        assertEquals(start + 20, s.getSlots()[1].from);
+        assertEquals(start + 30, s.getSlots()[1].till);
+	}
+
+	@Test
     void testParseJson() {
         Scheduler s = makeScheduler(10, 20, 30, 35, 40, 60);
         assertEquals("10-20;30-35;40-60", s.toString());

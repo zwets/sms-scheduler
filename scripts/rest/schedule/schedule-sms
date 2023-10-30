@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CONTEXT=/schedule
-USAGE="CLIENT TARGET BIZKEY PAYLOAD FROM1 TILL1 ...
+USAGE="CLIENT TARGET BIZKEY SCHEDULE PAYLOAD
 
   Schedule an SMS
 
@@ -9,25 +9,22 @@ USAGE="CLIENT TARGET BIZKEY PAYLOAD FROM1 TILL1 ...
    CLIENT       Client on whose behalf you are sending
    TARGET       Identifier of the target (recipient)
    BIZKEY       Business key of this send
-   FROM1 TILL1  Time slot for sending (seconds in the epoch)
-   ...          ... more time slots in which to send"
+   SCHEDULE     Schedule string
+   PAYLOAD      Message to be scheduled
+
+  The SCHEDULE can be either
+     SEC-SEC(;SEC-SEC)* where SEC is epoch seconds (date +%s)
+     ISO/ISO(;ISO/ISO)* where ISO is zoned datetime (date -Is)"
 
 . "$(dirname "$0")/../lib/common.sh"
 
-(($# >= 6)) || usage_exit
+(($# == 5)) || usage_exit
 
 CLIENT="$1"
 TARGET="$2"
 BIZKEY="$3"
-PAYLOAD="$4"
-
-shift 4
-SCHEDULE=""
-while (($# != 0)); do
-    SCHEDULE="${SCHEDULE}$1-$2"
-    shift 2
-    (($# == 0)) || SCHEDULE="$SCHEDULE;"
-done
+SCHEDULE="$4"
+PAYLOAD="$5"
 
 printf '{ "targetId": "%s", "uniqueId": "%s", "schedule": "%s", "payload":  "%s" }' \
 	"$TARGET" "$BIZKEY" "$SCHEDULE" "${PAYLOAD/\"/\\\"}" |

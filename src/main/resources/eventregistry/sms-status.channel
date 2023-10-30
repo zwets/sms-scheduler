@@ -7,6 +7,6 @@
   "topics": [ "sms-status" ],
   "deserializerType": "json",
   "channelEventKeyDetection": {
-    "fixedValue": "sms-status"
+    "fixedValue": "smsStatusEvent"
   }
 }

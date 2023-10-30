@@ -1,0 +1,14 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+BOOTSTRAP_SERVER='localhost:9092'
+TOPIC='schedule-sms'
+
+NOW="$(date +%s)"
+SCHEDULE="$NOW-$((NOW+10));$((NOW+20))-$((NOW+30))"
+#printf 'header:42,anotherheader:life universe everything,\tkey1\tvalue1\tkey2\tvalue2\tProbably Content\n' |
+#  kafka-console-producer.sh --property parse.headers=true --property parse.key=true --bootstrap-server "$BOOTSTRAP_SERVER" --topic "$TOPIC"
+printf '{"client": "test", "schedule": "%s", "message": "DUMMY MESSAGE", "key": "mybizkey", "target": "my-target" }\n' "$SCHEDULE" |
+  kafka-console-producer.sh --property parse.headers=false --property parse.key=false --bootstrap-server "$BOOTSTRAP_SERVER" --topic "$TOPIC"

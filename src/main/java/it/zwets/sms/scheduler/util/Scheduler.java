@@ -12,7 +12,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Scheduler manages a schedule which is a list of zero or more time slots.
+ * Scheduler manages a schedule which is a list of zero or more {@link Slot}s.
+ * 
+ * Scheduler can parse two String formats.  Both are semicolon separated lists
+ * of Slots.  Slots can be parsed as either long-long or iso/iso, where long
+ * are seconds since the Epoch, and iso is a ISO8601 instant (with time offset).
  * 
  * Scheduler orders and merges the slots upon construction.
  * 

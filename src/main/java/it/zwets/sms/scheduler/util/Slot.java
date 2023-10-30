@@ -2,6 +2,8 @@ package it.zwets.sms.scheduler.util;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
 import java.util.Date;
 import java.util.Scanner;
 
@@ -14,7 +16,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 * The slot starts at <code>from</code> seconds since the Epoch and ends
 * at <code>till</code> seconds since the Epoch.
 * 
-* Note that units are POSIX seconds since the Epoch (1970-01-01 00:00 UTC)
+* Slots can be parsed from either "long-long" or "ISO8601/ISO8601".
+* 
+* <b>Note:</n> units are POSIX seconds since the Epoch (1970-01-01 00:00 UTC)
 * (see <code>date +%s</code>), whereas {@link java.util.Date#getTime()}
 * is <i>milli</i>seconds since the epoch.
 * 
@@ -96,14 +100,31 @@ public class Slot implements Serializable {
     }
     
     /**
-     * Parse a slot from its toString representation.
-     * @param str string produced by toString
+     * Return the slot with ISO8601 formatted instants, rather than long
+     * @return the alternatively formatted slot
+     */
+    public String toStringISO() {
+        return "%s/%s".formatted(Instant.ofEpochSecond(from), Instant.ofEpochSecond(till));
+    }
+    
+    /**
+     * Parse a slot from one of its representations: long-long or iso/iso"
+     * @param str representing the slot
      * @return a Slot or throws RuntimeException
      */
     public static Slot parse(String str) {
         try (Scanner scanner = new Scanner(str)) {
-            scanner.useDelimiter("-");
-            return new Slot(scanner.nextLong(), scanner.nextLong());
+            if (str.contains("/")) {
+                scanner.useDelimiter("/");
+                return new Slot(isoToLong(scanner.next()), isoToLong(scanner.next()));
+            }
+            else if (str.matches("^\\d+-\\d+$")) {
+                scanner.useDelimiter("-");
+                return new Slot(scanner.nextLong(), scanner.nextLong());
+            }
+            else {
+                throw new IllegalArgumentException("Not a recognised Slot format: %s".formatted(str));
+            }
         }
     }
     
@@ -141,5 +162,14 @@ public class Slot implements Serializable {
             e.printStackTrace();
             throw new RuntimeException("Failed to parse valid Slot from JSON", e);
         }
+    }
+    
+    /**
+     * Convenience for converting an iso date time with offset to seconds since epoch
+     * @param iso string value
+     * @return seconds since the epoch
+     */
+    static long isoToLong(String iso) {
+        return DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(iso, t -> t.getLong(ChronoField.INSTANT_SECONDS));
     }
 }
