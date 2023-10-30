@@ -1,0 +1,15 @@
+{
+  "key": "cancel",
+  "name": "Cancel SMS Event",
+  "inboundChannelKeys": [
+    "scheduleSmsChannel"
+  ],
+  "correlationParameters": [
+  ],
+  "payload": [
+    { "name": "action", "type": "string" },
+    { "name": "client", "type": "string" },
+    { "name": "selector", "type": "string" },
+    { "name": "value", "type": "string" }
+  ]
+}

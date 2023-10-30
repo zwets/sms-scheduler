@@ -7,6 +7,6 @@
   "topics": [ "schedule-sms" ],
   "deserializerType": "json",
   "channelEventKeyDetection": {
-    "fixedValue": "scheduleSmsEvent"
+    "jsonField": "action"
   }
 }

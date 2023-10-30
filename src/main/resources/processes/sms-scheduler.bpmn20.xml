@@ -65,7 +65,7 @@ RECV">
       <extensionElements>
         <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
-        <flowable:eventType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[scheduleSmsEvent]]></flowable:eventType>
+        <flowable:eventType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[schedule]]></flowable:eventType>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="client" sourceType="string" target="clientId"></flowable:eventOutParameter>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="target" sourceType="string" target="targetId"></flowable:eventOutParameter>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="key" sourceType="string" target="businessKey"></flowable:eventOutParameter>

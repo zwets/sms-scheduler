@@ -1,0 +1,24 @@
+#!/bin/bash
+
+USAGE="CLIENT { id | target | key | all } ID
+
+  Cancel one or more SMS over Kafka
+
+  POSITIONAL PARAMS
+   CLIENT         Identifies the client (tenant) of the service
+   id ID          Cancel the single schedule with instance ID
+   target ID      Cancel all scheduled for target ID
+   key ID         Cancel all marked with key ID
+   all ID         Cancel all for client; ID must be yes-i-am-sure"
+
+. "$(dirname "$0")/../lib/common.sh"
+
+(($# == 3)) || usage_exit
+
+CLIENT="$1"
+case $2 in id|target|key|all) SELECTOR="$2" ;; *) usage_exit 2 ;; esac
+ID="$3"
+
+printf '{ "action": "cancel", "client": "%s", "selector": "%s", "value": "%s" }\n' \
+	"$CLIENT" "$SELECTOR" "$ID" |
+kcat_send

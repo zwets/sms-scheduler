@@ -69,7 +69,7 @@ dump_input() {
 
 kcat_send() {
     F="${1:--}" && [ "$F" = '-' ] || [ -f "$F" ] || err_exit "no such file: $F"
-    dump_input "$F" | tr -d '\n' ' ' | kcat -P -b "$BROKER" -t "$TOPIC" -p "$PARTITION" ${EVENTKEY:+-k} "${EVENTKEY:+$EVENTKEY}" -c 1 ${VERBOSE:+-v}
+    dump_input "$F" | tr '\n' ' ' | kcat -P -b "$BROKER" -t "$TOPIC" -p "$PARTITION" ${EVENTKEY:+-k} "${EVENTKEY:+$EVENTKEY}" -c 1 ${VERBOSE:+-v}
 }
 
 # vim: sts=4:sw=4:ai:si:et
