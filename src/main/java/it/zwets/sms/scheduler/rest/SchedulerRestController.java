@@ -80,7 +80,7 @@ public class SchedulerRestController {
     }
 
     /* Request from client; all fields except schedule and payload can be absent. */
-    private final record Request(String client, String target, String key, String schedule, String payload) { }
+    private final record Request(String target, String key, String schedule, String payload) { }
     
     @PostMapping(path = "{clientId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")

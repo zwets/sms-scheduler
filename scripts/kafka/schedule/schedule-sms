@@ -1,9 +1,9 @@
 #!/bin/bash
 
-CONTEXT=/schedule
+EVENTKEY="schedule"
 USAGE="CLIENT TARGET BIZKEY SCHEDULE PAYLOAD
 
-  Schedule an SMS over REST
+  Schedule an SMS over Kafka
 
   POSITIONAL PARAMS
    CLIENT       Client on whose behalf you are sending
@@ -26,6 +26,6 @@ BIZKEY="$3"
 SCHEDULE="$4"
 PAYLOAD="$5"
 
-printf '{ "target": "%s", "key": "%s", "schedule": "%s", "payload": "%s" }' \
-	"$TARGET" "$BIZKEY" "$SCHEDULE" "${PAYLOAD//\"/\\\"}" |
-rest_POST /$CLIENT
+printf '{ "client": "%s", "target": "%s", "key": "%s", "schedule": "%s", "message": "%s" }\n' \
+	"$CLIENT" "$TARGET" "$BIZKEY" "$SCHEDULE" "$PAYLOAD" |
+kcat_send
