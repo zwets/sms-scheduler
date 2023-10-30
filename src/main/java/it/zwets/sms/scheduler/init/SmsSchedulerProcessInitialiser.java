@@ -53,7 +53,7 @@ public class SmsSchedulerProcessInitialiser implements ExecutionListener {
         execution.setVariable(Constants.VAR_SMS_RETRIES, -1);
 		
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Process initialised: I:C:T:B:S:P {}:{}:{}:{}:{}:P", 
+            LOG.debug("Process initialised: I:C:T:B:S:P {}:{}:{}:{}:{}:{}", 
                 StringUtils.substringBefore(execution.getProcessInstanceId(), '-'),
                 clientId, 
 		        execution.getVariable(Constants.VAR_TARGET_ID),

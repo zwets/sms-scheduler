@@ -29,7 +29,7 @@
         <flowable:triggerEventType><![CDATA[smsStatusEvent]]></flowable:triggerEventType>
         <flowable:eventInParameter sourceExpression="${execution.processInstanceId}" target="correl-id" targetType="string"></flowable:eventInParameter>
         <flowable:eventInParameter sourceExpression="${clientId}" target="client-id" targetType="string"></flowable:eventInParameter>
-        <flowable:eventInParameter sourceExpression="${payload}" target="payload" targetType="string"></flowable:eventInParameter>
+        <flowable:eventInParameter sourceExpression="${payload}" target="message" targetType="string"></flowable:eventInParameter>
         <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:channelKey xmlns:flowable="http://flowable.org/bpmn"><![CDATA[sendSmsChannel]]></flowable:channelKey>

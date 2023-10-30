@@ -22,14 +22,13 @@ BIZKEY="$3"
 PAYLOAD="$4"
 
 shift 4
-SCHEDULE="["
+SCHEDULE=""
 while (($# != 0)); do
-    SCHEDULE="$SCHEDULE { \"from\": $1, \"till\": $2 }"
+    SCHEDULE="${SCHEDULE}$1-$2"
     shift 2
-    (($# == 0)) || SCHEDULE="$SCHEDULE,"
+    (($# == 0)) || SCHEDULE="$SCHEDULE;"
 done
-SCHEDULE="$SCHEDULE ]"
 
-printf '{ "targetId": "%s", "uniqueId": "%s", "schedule": %s, "payload":  "%s" }' \
+printf '{ "targetId": "%s", "uniqueId": "%s", "schedule": "%s", "payload":  "%s" }' \
 	"$TARGET" "$BIZKEY" "$SCHEDULE" "${PAYLOAD/\"/\\\"}" |
 rest_POST /$CLIENT
