@@ -11,6 +11,6 @@
     { "name": "correl-id", "type": "string" },
     { "name": "sms-status", "type": "string" },
     { "name": "error-code", "type": "integer" },
-    { "name": "error-description", "type": "string" }
+    { "name": "error-text", "type": "string" }
   ]
 }

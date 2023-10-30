@@ -131,7 +131,7 @@ public class SmsSchedulerConfiguration {
 
         public static final String VAR_CLIENT_ID = "clientId";
         public static final String VAR_TARGET_ID = "targetId";
-        //public static final String VAR_CLIENT_KEY = not a variable, is businessKey
+        public static final String VAR_CLIENT_KEY = "clientKey";
         public static final String VAR_SCHEDULE = "schedule";
         public static final String VAR_PAYLOAD = "payload";
         
@@ -153,11 +153,12 @@ public class SmsSchedulerConfiguration {
         public static final String SMS_STATUS_EXPIRED = "EXPIRED";
         public static final String SMS_STATUS_SENT = "SENT";
         public static final String SMS_STATUS_DELIVERED = "DELIVERED";
+        public static final String SMS_STATUS_CANCELED = "CANCELED";
+        public static final String SMS_STATUS_BLOCKED = "BLOCKED";
         
         // Channel and event names (tied to the *.event and *.channel definitions)
         
         public static final String CHANNEL_SCHEDULE_SMS = "scheduleSmsChannel";
-        public static final String EVENT_KEY_SCHEDULE_SMS = "scheduleSmsEvent";
         public static final String CHANNEL_SEND_SMS = "sendSmsChannel";
         public static final String EVENT_KEY_SEND_SMS = "sendSmsEvent";
         public static final String CHANNEL_SMS_STATUS = "smsStatusChannel";

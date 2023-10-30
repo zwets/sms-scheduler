@@ -76,7 +76,7 @@ public class SchedulerRestController {
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public List<SmsStatus> getByKey(@PathVariable String clientId, @PathVariable String clientKey) {
         LOG.trace("REST GET /schedule/{}/by-key/{}", clientId, clientKey);
-        return theService.getStatusListByBusinessKey(clientId, clientKey);
+        return theService.getStatusListByClientKey(clientId, clientKey);
     }
 
     /* Request from client; all fields except schedule and payload can be absent. */

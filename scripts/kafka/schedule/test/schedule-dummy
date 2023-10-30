@@ -1,6 +1,6 @@
 #!/bin/bash
 
-USAGE="[CLIENT [TARGET [BIZKEY [SCHEDULE [MESSAGE]]]]]
+USAGE="[CLIENT [TARGET [KEY [SCHEDULE [MESSAGE]]]]]
 
   Schedule an SMS over Kafka, with dummy defaults.
 
@@ -13,8 +13,8 @@ USAGE="[CLIENT [TARGET [BIZKEY [SCHEDULE [MESSAGE]]]]]
 NOW=$(date +%s)
 CLIENT="${1:-test}"
 TARGET="${2:-target1}"
-BIZKEY="${3:-kcat-dummy-$$}"
-SCHEDULE="${4:-"$NOW-$((NOW+10));$((NOW+20))-$((NOW+30))"}"
+KEY="${3:-kcat-dummy-$$}"
+SCHEDULE="${4:-"$((NOW+10))-$((NOW+20));$((NOW+30))-$((NOW+40))"}"
 MESSAGE="${5:-Dummy Kafka message}"
 
-exec "$(dirname "$0")/../schedule-sms" "$CLIENT" "$TARGET" "$BIZKEY" "$SCHEDULE" "$MESSAGE"
+exec "$(dirname "$0")/../schedule-sms" "$CLIENT" "$TARGET" "$KEY" "$SCHEDULE" "$MESSAGE"

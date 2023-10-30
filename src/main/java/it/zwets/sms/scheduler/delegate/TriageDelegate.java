@@ -86,7 +86,7 @@ public class TriageDelegate implements JavaDelegate {
                 prevDueTime = Instant.now();
             }
 
-            smsDueTime = scheduler.getFirstAvailableInstant(prevDueTime).plus(waitAfterFail);
+            smsDueTime = scheduler.getFirstAvailableInstant(prevDueTime.plus(waitAfterFail));
             deadlineInstant = scheduler.getDeadlineInstant(smsDueTime);
             
             if (smsDueTime == null) {

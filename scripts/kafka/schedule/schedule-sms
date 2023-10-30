@@ -1,13 +1,13 @@
 #!/bin/bash
 
-USAGE="CLIENT TARGET BIZKEY SCHEDULE PAYLOAD
+USAGE="CLIENT TARGET KEY SCHEDULE PAYLOAD
 
   Schedule an SMS over Kafka
 
   POSITIONAL PARAMS
    CLIENT       Client on whose behalf you are sending
    TARGET       Identifier of the target (recipient)
-   BIZKEY       Client key for this send
+   KEY          Identifier of the send instance (optionally unique)
    SCHEDULE     Schedule string
    PAYLOAD      Message to be scheduled
 
@@ -19,14 +19,12 @@ USAGE="CLIENT TARGET BIZKEY SCHEDULE PAYLOAD
 
 (($# == 5)) || usage_exit
 
-[ -z "$EVENTKEY" ] && EVENTKEY="schedule-sms" || err_exit "EVENTKEY must be 'schedule-sms'"
-
 CLIENT="$1"
 TARGET="$2"
-BIZKEY="$3"
+KEY="$3"
 SCHEDULE="$4"
 PAYLOAD="$5"
 
 printf '{ "action": "schedule", "client": "%s", "target": "%s", "key": "%s", "schedule": "%s", "message": "%s" }\n' \
-	"$CLIENT" "$TARGET" "$BIZKEY" "$SCHEDULE" "$PAYLOAD" |
+	"$CLIENT" "$TARGET" "$KEY" "$SCHEDULE" "$PAYLOAD" |
 kcat_send

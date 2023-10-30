@@ -48,20 +48,21 @@ public class SmsSchedulerService {
      */
 	@Transactional
     public SmsStatus scheduleSms(
-    		String clientId, String targetId, String businessKey, String schedule, String payload) {
+    		String clientId, String targetId, String clientKey, String schedule, String payload) {
 
-		LOG.debug("SmsSchedulerService::scheduleSms({},{},{},{},{})", clientId, targetId, businessKey, schedule, payload);
+		LOG.debug("SmsSchedulerService::scheduleSms({},{},{},{},{})", clientId, targetId, clientKey, schedule, payload);
 		
 		Map<String,Object> vars = new HashMap<String,Object>();
 		
 		vars.put(Constants.VAR_CLIENT_ID, clientId);
 		vars.put(Constants.VAR_TARGET_ID, targetId);
+		vars.put(Constants.VAR_CLIENT_KEY, clientKey);
 		vars.put(Constants.VAR_SCHEDULE, schedule);
 		vars.put(Constants.VAR_PAYLOAD, payload);
 
-		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.APP_PROCESS_NAME, businessKey, vars);
+		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.APP_PROCESS_NAME, vars);
 		
-		return new SmsStatus(pi.getId(), clientId, targetId, businessKey, Constants.SMS_STATUS_NEW, dateHelper.format(pi.getStartTime()), null, 0);
+		return new SmsStatus(pi.getId(), clientId, targetId, clientKey, Constants.SMS_STATUS_NEW, dateHelper.format(pi.getStartTime()), null, 0);
     }
 
 	@Transactional
@@ -146,14 +147,14 @@ public class SmsSchedulerService {
     }
 
     @Transactional
-    public List<SmsStatus> getStatusListByBusinessKey(String clientId, String businessKey) {
-        LOG.trace("SmsSchedulerService::getStatusList(clientId={}, businessKey={})", clientId, businessKey);
+    public List<SmsStatus> getStatusListByClientKey(String clientId, String clientKey) {
+        LOG.trace("SmsSchedulerService::getStatusList(clientId={}, clientKey={})", clientId, clientKey);
         
         return historyService
                 .createHistoricProcessInstanceQuery()
                 .processDefinitionKey(Constants.APP_PROCESS_NAME)
-                .processInstanceBusinessKey(businessKey)
                 .variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .variableValueEquals(Constants.VAR_CLIENT_KEY, clientKey)
                 .includeProcessVariables()
                 .orderByProcessInstanceStartTime().asc()
                 .list().stream()
@@ -167,7 +168,7 @@ public class SmsSchedulerService {
                 hpi.getId(),
                 (String) pvs.getOrDefault(Constants.VAR_CLIENT_ID, null),
                 (String) pvs.getOrDefault(Constants.VAR_TARGET_ID, null),
-                hpi.getBusinessKey(),
+                (String) pvs.getOrDefault(Constants.VAR_CLIENT_KEY, null),
                 (String) pvs.getOrDefault(Constants.VAR_SMS_STATUS, null),
                 dateHelper.format(hpi.getStartTime()),
                 dateHelper.format(hpi.getEndTime()),

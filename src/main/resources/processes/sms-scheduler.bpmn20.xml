@@ -30,20 +30,19 @@
         <flowable:eventInParameter sourceExpression="${execution.processInstanceId}" target="correl-id" targetType="string"></flowable:eventInParameter>
         <flowable:eventInParameter sourceExpression="${clientId}" target="client-id" targetType="string"></flowable:eventInParameter>
         <flowable:eventInParameter sourceExpression="${payload}" target="message" targetType="string"></flowable:eventInParameter>
+        <flowable:eventInParameter sourceExpression="${smsDeadline}" target="deadline" targetType="string"></flowable:eventInParameter>
+        <flowable:eventOutParameter source="sms-status" sourceType="string" target="smsStatus"></flowable:eventOutParameter>
         <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:channelKey xmlns:flowable="http://flowable.org/bpmn"><![CDATA[sendSmsChannel]]></flowable:channelKey>
-        <flowable:channelType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[kafka]]></flowable:channelType>
-        <flowable:triggerChannelKey xmlns:flowable="http://flowable.org/bpmn"><![CDATA[smsStatusChannel]]></flowable:triggerChannelKey>
-        <flowable:triggerChannelType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[kafka]]></flowable:triggerChannelType>
+        <flowable:triggerEventCorrelationParameter xmlns:flowable="http://flowable.org/bpmn" name="correl-id" type="string" value="${execution.processInstanceId}"></flowable:triggerEventCorrelationParameter>
       </extensionElements>
     </serviceTask>
-    <exclusiveGateway id="orGwy1" default="toScheduled"></exclusiveGateway>
+    <exclusiveGateway id="orGwy1" default="toEvGwy1"></exclusiveGateway>
     <exclusiveGateway id="orGwy2" default="bypassAck2"></exclusiveGateway>
-    <eventBasedGateway id="evGwy"></eventBasedGateway>
+    <eventBasedGateway id="evGwy2"></eventBasedGateway>
     <intermediateCatchEvent id="timerRecvAck">
       <extensionElements>
-        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
       <timerEventDefinition>
@@ -53,11 +52,10 @@
     <intermediateCatchEvent id="recvAckRecv" name="ACK
 RECV">
       <extensionElements>
-        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:eventType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[smsStatusEvent]]></flowable:eventType>
-        <flowable:channelKey xmlns:flowable="http://flowable.org/bpmn"><![CDATA[smsStatusChannel]]></flowable:channelKey>
-        <flowable:channelType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[kafka]]></flowable:channelType>
+        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="sms-status" sourceType="string" target="smsStatus"></flowable:eventOutParameter>
+        <flowable:eventCorrelationParameter xmlns:flowable="http://flowable.org/bpmn" name="correl-id" type="string" value="${execution.processInstanceId}"></flowable:eventCorrelationParameter>
       </extensionElements>
     </intermediateCatchEvent>
     <exclusiveGateway id="orGwy3" default="retryLoop"></exclusiveGateway>
@@ -68,60 +66,105 @@ RECV">
         <flowable:eventType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[schedule]]></flowable:eventType>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="client" sourceType="string" target="clientId"></flowable:eventOutParameter>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="target" sourceType="string" target="targetId"></flowable:eventOutParameter>
-        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="key" sourceType="string" target="businessKey"></flowable:eventOutParameter>
+        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="key" sourceType="string" target="clientKey"></flowable:eventOutParameter>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="schedule" sourceType="string" target="schedule"></flowable:eventOutParameter>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="message" sourceType="string" target="payload"></flowable:eventOutParameter>
-        <flowable:channelKey xmlns:flowable="http://flowable.org/bpmn"><![CDATA[scheduleSmsChannel]]></flowable:channelKey>
-        <flowable:channelType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[kafka]]></flowable:channelType>
       </extensionElements>
     </startEvent>
     <endEvent id="endExpired" name="EXPIRED">
       <extensionElements>
-        <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
+        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
       <terminateEventDefinition></terminateEventDefinition>
     </endEvent>
     <endEvent id="endEnroute" name="ENROUTE">
       <extensionElements>
-        <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
+        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
       <terminateEventDefinition></terminateEventDefinition>
     </endEvent>
     <endEvent id="endSent" name="SENT">
       <extensionElements>
-        <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
+        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
       <terminateEventDefinition></terminateEventDefinition>
     </endEvent>
     <endEvent id="endDelivered" name="DELIVERED">
       <extensionElements>
-        <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
+        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
       <terminateEventDefinition></terminateEventDefinition>
     </endEvent>
-    <sequenceFlow id="toAckRecv" sourceRef="evGwy" targetRef="recvAckRecv"></sequenceFlow>
+    <sequenceFlow id="toAckRecv" sourceRef="evGwy2" targetRef="recvAckRecv"></sequenceFlow>
     <boundaryEvent id="sendTimeout" attachedToRef="sendSmsService" cancelActivity="true">
       <extensionElements>
-        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
       <timerEventDefinition>
         <timeDuration>${smsSchedulerConfiguration.ackSendTimeout}</timeDuration>
       </timerEventDefinition>
     </boundaryEvent>
-    <sequenceFlow id="toEvGwy" sourceRef="orGwy2" targetRef="evGwy">
-      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "SENT"}]]></conditionExpression>
-    </sequenceFlow>
-    <sequenceFlow id="fromAck2" sourceRef="recvAckRecv" targetRef="orGwy3"></sequenceFlow>
+    <sequenceFlow id="toTriage" sourceRef="eventStart" targetRef="triageService"></sequenceFlow>
     <sequenceFlow id="fromTriage" sourceRef="triageService" targetRef="orGwy1"></sequenceFlow>
-    <sequenceFlow id="toScheduled" sourceRef="orGwy1" targetRef="schedulerTimer"></sequenceFlow>
+    <endEvent id="endCanceled" name="CANCELED">
+      <extensionElements>
+        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
+      </extensionElements>
+      <terminateEventDefinition></terminateEventDefinition>
+    </endEvent>
+    <sequenceFlow id="toTimerAckRecv" sourceRef="evGwy2" targetRef="timerRecvAck"></sequenceFlow>
+    <intermediateCatchEvent id="recvCancel">
+      <extensionElements>
+        <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
+        <flowable:eventType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[cancel]]></flowable:eventType>
+        <flowable:eventCorrelationParameter xmlns:flowable="http://flowable.org/bpmn" name="client" type="string" value="${clientId}"></flowable:eventCorrelationParameter>
+        <flowable:eventCorrelationParameter xmlns:flowable="http://flowable.org/bpmn" name="key" type="string" value="${clientKey}"></flowable:eventCorrelationParameter>
+      </extensionElements>
+    </intermediateCatchEvent>
+    <sequenceFlow id="toEndEnroute" sourceRef="sendTimeout" targetRef="endEnroute"></sequenceFlow>
+    <eventBasedGateway id="evGwy1"></eventBasedGateway>
+    <sequenceFlow id="toEvGwy1" sourceRef="orGwy1" targetRef="evGwy1"></sequenceFlow>
+    <endEvent id="endBlocked" name="BLOCKED">
+      <extensionElements>
+        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
+      </extensionElements>
+      <terminateEventDefinition></terminateEventDefinition>
+    </endEvent>
+    <intermediateCatchEvent id="recvBlock">
+      <extensionElements>
+        <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
+        <flowable:eventType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[block]]></flowable:eventType>
+        <flowable:eventCorrelationParameter xmlns:flowable="http://flowable.org/bpmn" name="client" type="string" value="${clientId}"></flowable:eventCorrelationParameter>
+        <flowable:eventCorrelationParameter xmlns:flowable="http://flowable.org/bpmn" name="target" type="string" value="${targetId}"></flowable:eventCorrelationParameter>
+      </extensionElements>
+    </intermediateCatchEvent>
+    <sequenceFlow id="toBlocked" sourceRef="orGwy1" targetRef="endBlocked">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "BLOCKED"}]]></conditionExpression>
+    </sequenceFlow>
     <sequenceFlow id="toExpired" sourceRef="orGwy1" targetRef="endExpired">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "EXPIRED"}]]></conditionExpression>
     </sequenceFlow>
-    <sequenceFlow id="toEndEnroute" sourceRef="sendTimeout" targetRef="endEnroute"></sequenceFlow>
+    <sequenceFlow id="toRecvCancel" sourceRef="evGwy1" targetRef="recvCancel"></sequenceFlow>
+    <sequenceFlow id="toRecvBlock" sourceRef="evGwy1" targetRef="recvBlock"></sequenceFlow>
+    <sequenceFlow id="toScheduled" sourceRef="evGwy1" targetRef="schedulerTimer"></sequenceFlow>
+    <sequenceFlow id="toCanceled" sourceRef="recvCancel" targetRef="endCanceled">
+      <extensionElements>
+        <flowable:executionListener event="take" expression="${execution.setVariable(&quot;smsStatus&quot;, &quot;CANCELED&quot;)}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="toBlockFromEvt" sourceRef="recvBlock" targetRef="endBlocked">
+      <extensionElements>
+        <flowable:executionListener event="take" expression="${execution.setVariable(&quot;smsStatus&quot;,&quot;BLOCKED&quot;)}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="toSend" sourceRef="schedulerTimer" targetRef="sendSmsService">
+      <extensionElements>
+        <flowable:executionListener event="take" expression="${execution.setVariable(&quot;smsStatus&quot;,&quot;ENROUTE&quot;)}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
     <sequenceFlow id="toSent" sourceRef="timerRecvAck" targetRef="endSent"></sequenceFlow>
     <sequenceFlow id="fromSend" sourceRef="sendSmsService" targetRef="orGwy2"></sequenceFlow>
-    <sequenceFlow id="toTimerAckRecv" sourceRef="evGwy" targetRef="timerRecvAck"></sequenceFlow>
+    <sequenceFlow id="fromAck2" sourceRef="recvAckRecv" targetRef="orGwy3"></sequenceFlow>
     <sequenceFlow id="toDelivered" sourceRef="orGwy3" targetRef="endDelivered">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "DELIVERED"}]]></conditionExpression>
     </sequenceFlow>
@@ -130,17 +173,14 @@ RECV">
         <flowable:executionListener event="take" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
     </sequenceFlow>
+    <sequenceFlow id="toEvGwy2" sourceRef="orGwy2" targetRef="evGwy2">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "SENT"}]]></conditionExpression>
+    </sequenceFlow>
     <sequenceFlow id="bypassAck2" sourceRef="orGwy2" targetRef="orGwy3">
       <extensionElements>
         <flowable:executionListener event="take" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
     </sequenceFlow>
-    <sequenceFlow id="toSend" sourceRef="schedulerTimer" targetRef="sendSmsService">
-      <extensionElements>
-        <flowable:executionListener event="take" expression="${execution.setVariable(&quot;smsStatus&quot;,&quot;ENROUTE&quot;)}"></flowable:executionListener>
-      </extensionElements>
-    </sequenceFlow>
-    <sequenceFlow id="toTriage" sourceRef="eventStart" targetRef="triageService"></sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_smsSchedulerProcess">
     <bpmndi:BPMNPlane bpmnElement="smsSchedulerProcess" id="BPMNPlane_smsSchedulerProcess">
@@ -148,28 +188,28 @@ RECV">
         <omgdc:Bounds height="80.0" width="100.0" x="105.0" y="78.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="schedulerTimer" id="BPMNShape_schedulerTimer">
-        <omgdc:Bounds height="31.0" width="31.0" x="320.0" y="102.5"></omgdc:Bounds>
+        <omgdc:Bounds height="31.0" width="31.0" x="445.0" y="102.5"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="sendSmsService" id="BPMNShape_sendSmsService">
-        <omgdc:Bounds height="80.0" width="100.0" x="390.0" y="78.0"></omgdc:Bounds>
+        <omgdc:Bounds height="80.0" width="100.0" x="515.0" y="78.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="orGwy1" id="BPMNShape_orGwy1">
         <omgdc:Bounds height="40.0" width="40.0" x="240.0" y="98.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="orGwy2" id="BPMNShape_orGwy2">
-        <omgdc:Bounds height="40.0" width="40.0" x="535.5" y="98.25"></omgdc:Bounds>
+        <omgdc:Bounds height="40.0" width="40.0" x="655.5" y="98.25"></omgdc:Bounds>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="evGwy" id="BPMNShape_evGwy">
-        <omgdc:Bounds height="40.0" width="40.0" x="620.75" y="98.375"></omgdc:Bounds>
+      <bpmndi:BPMNShape bpmnElement="evGwy2" id="BPMNShape_evGwy2">
+        <omgdc:Bounds height="40.0" width="40.0" x="730.75" y="98.375"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="timerRecvAck" id="BPMNShape_timerRecvAck">
-        <omgdc:Bounds height="31.0" width="31.0" x="625.25" y="180.0"></omgdc:Bounds>
+        <omgdc:Bounds height="31.0" width="31.0" x="735.25" y="180.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="recvAckRecv" id="BPMNShape_recvAckRecv">
-        <omgdc:Bounds height="30.0" width="30.0" x="706.625" y="103.8125"></omgdc:Bounds>
+        <omgdc:Bounds height="30.0" width="30.0" x="811.625" y="103.8125"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="orGwy3" id="BPMNShape_orGwy3">
-        <omgdc:Bounds height="40.0" width="40.0" x="781.625" y="98.8125"></omgdc:Bounds>
+        <omgdc:Bounds height="40.0" width="40.0" x="881.625" y="98.8125"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="eventStart" id="BPMNShape_eventStart">
         <omgdc:Bounds height="30.0" width="30.5" x="29.75" y="103.0"></omgdc:Bounds>
@@ -178,76 +218,116 @@ RECV">
         <omgdc:Bounds height="28.0" width="28.0" x="246.0" y="255.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="endEnroute" id="BPMNShape_endEnroute">
-        <omgdc:Bounds height="28.0" width="28.0" x="429.35770368297875" y="255.0"></omgdc:Bounds>
+        <omgdc:Bounds height="28.0" width="28.0" x="554.3577036829788" y="255.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="endSent" id="BPMNShape_endSent">
-        <omgdc:Bounds height="28.0" width="28.0" x="627.125" y="255.0"></omgdc:Bounds>
+        <omgdc:Bounds height="28.0" width="28.0" x="737.125" y="255.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="endDelivered" id="BPMNShape_endDelivered">
-        <omgdc:Bounds height="28.0" width="28.0" x="855.0" y="104.8125"></omgdc:Bounds>
+        <omgdc:Bounds height="28.0" width="28.0" x="955.0" y="104.8125"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="sendTimeout" id="BPMNShape_sendTimeout">
-        <omgdc:Bounds height="31.0" width="31.0" x="427.85770368297875" y="142.79244419574488"></omgdc:Bounds>
+        <omgdc:Bounds height="31.0" width="31.0" x="552.8577036829787" y="142.79244419574488"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="endCanceled" id="BPMNShape_endCanceled">
+        <omgdc:Bounds height="28.0" width="28.0" x="376.0" y="255.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="recvCancel" id="BPMNShape_recvCancel">
+        <omgdc:Bounds height="30.0" width="30.0" x="375.0" y="180.5"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="evGwy1" id="BPMNShape_evGwy1">
+        <omgdc:Bounds height="40.0" width="40.0" x="370.0" y="98.8125"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="endBlocked" id="BPMNShape_endBlocked">
+        <omgdc:Bounds height="28.0" width="28.0" x="310.0" y="28.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="recvBlock" id="BPMNShape_recvBlock">
+        <omgdc:Bounds height="30.0" width="30.0" x="375.0" y="27.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="toAckRecv" id="BPMNEdge_toAckRecv" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="15.880893300248138" flowable:targetDockerY="15.94905164059255">
-        <omgdi:waypoint x="659.9842032346911" y="119.07952463523978"></omgdi:waypoint>
-        <omgdi:waypoint x="706.6255447465331" y="119.58829136670445"></omgdi:waypoint>
+        <omgdi:waypoint x="769.9702344403672" y="119.09278093243107"></omgdi:waypoint>
+        <omgdi:waypoint x="811.6256473197373" y="119.57693236096699"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="toEvGwy" id="BPMNEdge_toEvGwy" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="20.759493670886076" flowable:targetDockerY="20.628930817610062">
-        <omgdi:waypoint x="574.8829226730929" y="118.80610770584794"></omgdi:waypoint>
-        <omgdi:waypoint x="621.318972615312" y="118.94397261531562"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="toScheduled" id="BPMNEdge_toScheduled" flowable:sourceDockerX="36.0" flowable:sourceDockerY="20.5" flowable:targetDockerX="16.0" flowable:targetDockerY="16.0">
-        <omgdi:waypoint x="279.4471297836688" y="118.5"></omgdi:waypoint>
-        <omgdi:waypoint x="320.0" y="118.5"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="toCanceled" id="BPMNEdge_toCanceled" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="390.0" y="210.44999661943856"></omgdi:waypoint>
+        <omgdi:waypoint x="390.0" y="255.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="toTimerAckRecv" id="BPMNEdge_toTimerAckRecv" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="16.0" flowable:targetDockerY="16.0">
-        <omgdi:waypoint x="641.25" y="137.81273065717062"></omgdi:waypoint>
-        <omgdi:waypoint x="641.25" y="180.0"></omgdi:waypoint>
+        <omgdi:waypoint x="751.25" y="137.81273065717062"></omgdi:waypoint>
+        <omgdi:waypoint x="751.25" y="180.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="toScheduled" id="BPMNEdge_toScheduled" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="16.0" flowable:targetDockerY="16.0">
+        <omgdi:waypoint x="409.657048181981" y="119.09097533632287"></omgdi:waypoint>
+        <omgdi:waypoint x="445.00103738132555" y="118.68380942816812"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="toTriage" id="BPMNEdge_toTriage" flowable:sourceDockerX="15.25" flowable:sourceDockerY="15.0" flowable:targetDockerX="24.430583427629585" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="60.199997306853305" y="118.0"></omgdi:waypoint>
         <omgdi:waypoint x="105.0" y="118.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="toSent" id="BPMNEdge_toSent" flowable:sourceDockerX="16.0" flowable:sourceDockerY="16.0" flowable:targetDockerX="14.385321100917432" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="641.3068779594172" y="211.94985912713693"></omgdi:waypoint>
-        <omgdi:waypoint x="641.4599369526986" y="255.0000046515745"></omgdi:waypoint>
+        <omgdi:waypoint x="751.3068779484172" y="211.94985912718266"></omgdi:waypoint>
+        <omgdi:waypoint x="751.4599369526986" y="255.0000046515745"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="toBlocked" id="BPMNEdge_toBlocked" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="260.5" y="98.5"></omgdi:waypoint>
+        <omgdi:waypoint x="260.5" y="42.0"></omgdi:waypoint>
+        <omgdi:waypoint x="310.0" y="42.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="toBlockFromEvt" id="BPMNEdge_toBlockFromEvt" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="375.0" y="42.0"></omgdi:waypoint>
+        <omgdi:waypoint x="337.9499431870269" y="42.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="fromTriage" id="BPMNEdge_fromTriage" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.5" flowable:targetDockerY="20.5">
         <omgdi:waypoint x="204.94999999999794" y="118.2367298578199"></omgdi:waypoint>
         <omgdi:waypoint x="240.40476190476048" y="118.4047619047619"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="toEndEnroute" id="BPMNEdge_toEndEnroute" flowable:sourceDockerX="16.0" flowable:sourceDockerY="16.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="443.7851141100766" y="174.74228351229428"></omgdi:waypoint>
-        <omgdi:waypoint x="443.420992713923" y="255.0001416698363"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="toEndEnroute" id="BPMNEdge_toEndEnroute" flowable:sourceDockerX="15.999999999999998" flowable:sourceDockerY="16.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="568.7851141100763" y="174.7422835123498"></omgdi:waypoint>
+        <omgdi:waypoint x="568.420992713923" y="255.0001416698363"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="toEvGwy2" id="BPMNEdge_toEvGwy2" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="20.759493670886076" flowable:targetDockerY="20.628930817610062">
+        <omgdi:waypoint x="694.8740808198073" y="118.81351335127997"></omgdi:waypoint>
+        <omgdi:waypoint x="731.3110053368799" y="118.93600533688182"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="toEvGwy1" id="BPMNEdge_toEvGwy1" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="20.5" flowable:targetDockerY="20.5">
+        <omgdi:waypoint x="279.3251503867061" y="118.61770186335403"></omgdi:waypoint>
+        <omgdi:waypoint x="370.374213836478" y="119.18671383647799"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="toDelivered" id="BPMNEdge_toDelivered" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="821.2032813087626" y="119.16937382297552"></omgdi:waypoint>
-        <omgdi:waypoint x="855.000380759817" y="118.91679631142821"></omgdi:waypoint>
+        <omgdi:waypoint x="921.2032813087626" y="119.16937382297552"></omgdi:waypoint>
+        <omgdi:waypoint x="955.000380759817" y="118.91679631142821"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="fromAck2" id="BPMNEdge_fromAck2" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="20.5" flowable:targetDockerY="20.5">
-        <omgdi:waypoint x="736.5746588118427" y="118.90535550905341"></omgdi:waypoint>
-        <omgdi:waypoint x="782.0" y="119.1875"></omgdi:waypoint>
+        <omgdi:waypoint x="841.5746121458632" y="118.91150451166625"></omgdi:waypoint>
+        <omgdi:waypoint x="881.9916666666657" y="119.17916666666666"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="retryLoop" id="BPMNEdge_retryLoop" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="802.125" y="138.2579400529387"></omgdi:waypoint>
-        <omgdi:waypoint x="802.125" y="327.0"></omgdi:waypoint>
+        <omgdi:waypoint x="902.125" y="138.2579400529387"></omgdi:waypoint>
+        <omgdi:waypoint x="902.125" y="327.0"></omgdi:waypoint>
         <omgdi:waypoint x="155.0" y="327.0"></omgdi:waypoint>
         <omgdi:waypoint x="155.0" y="157.95"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="toSend" id="BPMNEdge_toSend" flowable:sourceDockerX="16.0" flowable:sourceDockerY="16.0" flowable:targetDockerX="1.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="351.9493546166907" y="118.35455134005772"></omgdi:waypoint>
-        <omgdi:waypoint x="389.99999999999886" y="118.00863636363636"></omgdi:waypoint>
+        <omgdi:waypoint x="476.9493546041914" y="118.35455134017135"></omgdi:waypoint>
+        <omgdi:waypoint x="514.9999999999989" y="118.00863636363636"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="bypassAck2" id="BPMNEdge_bypassAck2" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="22.375" flowable:targetDockerY="19.9375">
-        <omgdi:waypoint x="556.0" y="98.75"></omgdi:waypoint>
-        <omgdi:waypoint x="556.0" y="42.0"></omgdi:waypoint>
-        <omgdi:waypoint x="804.0" y="42.0"></omgdi:waypoint>
-        <omgdi:waypoint x="804.0" y="101.1875"></omgdi:waypoint>
+        <omgdi:waypoint x="676.0" y="98.75"></omgdi:waypoint>
+        <omgdi:waypoint x="676.0" y="42.0"></omgdi:waypoint>
+        <omgdi:waypoint x="904.0" y="42.0"></omgdi:waypoint>
+        <omgdi:waypoint x="904.0" y="101.1875"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="toRecvBlock" id="BPMNEdge_toRecvBlock" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
+        <omgdi:waypoint x="390.36981285598046" y="99.18231285598047"></omgdi:waypoint>
+        <omgdi:waypoint x="390.09668351102164" y="56.9493872968566"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="toRecvCancel" id="BPMNEdge_toRecvCancel" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
+        <omgdi:waypoint x="390.3744838976053" y="138.3750185551707"></omgdi:waypoint>
+        <omgdi:waypoint x="390.09811113175795" y="180.50031733246232"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="fromSend" id="BPMNEdge_fromSend" flowable:sourceDockerX="63.62889687999245" flowable:sourceDockerY="40.5" flowable:targetDockerX="20.5" flowable:targetDockerY="20.5">
-        <omgdi:waypoint x="489.9499999999943" y="118.58869959884437"></omgdi:waypoint>
-        <omgdi:waypoint x="535.9510385234022" y="118.70103852340759"></omgdi:waypoint>
+        <omgdi:waypoint x="614.9499999999999" y="118.59325431764711"></omgdi:waypoint>
+        <omgdi:waypoint x="655.9485178829382" y="118.69851788293816"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="toExpired" id="BPMNEdge_toExpired" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
         <omgdi:waypoint x="260.43666666666667" y="137.5068121252498"></omgdi:waypoint>
