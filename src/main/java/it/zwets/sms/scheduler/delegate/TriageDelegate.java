@@ -43,7 +43,7 @@ public class TriageDelegate implements JavaDelegate {
 
         String clientId = execution.getVariable(Constants.VAR_CLIENT_ID, String.class);
         String targetId = execution.getVariable(Constants.VAR_TARGET_ID, String.class);
-
+        String clientKey = execution.getVariable(Constants.VAR_CLIENT_KEY, String.class);
         String schedule = execution.getVariable(Constants.VAR_SCHEDULE, String.class);
         Scheduler scheduler = new Scheduler(schedule);
 
@@ -71,8 +71,7 @@ public class TriageDelegate implements JavaDelegate {
 
                 LOG.info("Scheduling new request: {}:{}:{}:{}:{}",
                         StringUtils.substringBefore(execution.getProcessInstanceId(),'-'),
-                        clientId, targetId, execution.getProcessInstanceBusinessKey(),
-                        smsDueTime);
+                        clientId, targetId, clientKey, smsDueTime);
             }
             else {
                 LOG.warn("Request schedule expired on arrival, not scheduling a send");
@@ -93,13 +92,13 @@ public class TriageDelegate implements JavaDelegate {
                 LOG.info("Not retrying [{}] request, schedule exhausted: {}:{}:{}:{}", 
                         smsRetries+1,
                         StringUtils.substringBefore(execution.getProcessInstanceId(),'-'),
-                        clientId, targetId, execution.getProcessInstanceBusinessKey());
+                        clientId, targetId, clientKey);
             }
             else {
                 LOG.info("Will retry [{}] at {}: {}:{}:{}:{}", 
                         smsRetries+1, smsDueTime,
                         StringUtils.substringBefore(execution.getProcessInstanceId(),'-'),
-                        clientId, targetId, execution.getProcessInstanceBusinessKey());
+                        clientId, targetId, clientKey);
             }
         }
         

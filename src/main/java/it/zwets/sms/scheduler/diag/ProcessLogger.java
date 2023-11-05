@@ -53,10 +53,9 @@ public class ProcessLogger implements ExecutionListener {
 		
 		if (enabled && LOG.isInfoEnabled()) {
 			
-			LOG.info("Execution is at D:P(B):X/M:A:E {}:{}({}):{}/{}:{}:{}",
+			LOG.info("Execution is at D:P:X/M:A:E {}:{}:{}/{}:{}:{}",
 				StringUtils.substringBefore(execution.getProcessDefinitionId(), ':'),
 				StringUtils.substringBefore(execution.getProcessInstanceId(), '-'),
-				execution.getProcessInstanceBusinessKey(),
 				StringUtils.substringBefore(execution.getId(), '-'),
 				StringUtils.substringAfterLast(StringUtils.substringBefore(String.valueOf(execution.getCurrentFlowElement()), "@"),"."),
 				execution.getCurrentActivityId(), 

@@ -6,12 +6,12 @@ import java.util.Map;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.flowable.engine.HistoryService;
+import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,19 +23,21 @@ public class SmsSchedulerService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerService.class);
 	
-	@Autowired
 	private RuntimeService runtimeService;
 
-	@Autowired
 	private HistoryService historyService;
 
-	@Autowired
 	private DateHelper dateHelper;
 	
 	/** The DTO for reporting status */
     public final record SmsStatus(
             String id, String client, String target, String key, String status, String started, String ended, int retries) { }
 
+    public SmsSchedulerService(ProcessEngine processEngine, DateHelper dateHelper) {
+        this.runtimeService = processEngine.getRuntimeService();
+        this.historyService = processEngine.getHistoryService();
+        this.dateHelper = dateHelper;
+    }
     /**
      * Schedule an SMS
      * 
@@ -60,27 +62,33 @@ public class SmsSchedulerService {
 		vars.put(Constants.VAR_SCHEDULE, schedule);
 		vars.put(Constants.VAR_PAYLOAD, payload);
 
-		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.APP_PROCESS_NAME, vars);
+		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.SMS_SCHEDULER_PROCESS_NAME, vars);
 		
 		return new SmsStatus(pi.getId(), clientId, targetId, clientKey, Constants.SMS_STATUS_NEW, dateHelper.format(pi.getStartTime()), null, 0);
     }
 
 	@Transactional
-	public void cancelSms(String clientId, String targetId, String uniqueId) {
-		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelSms( clientId={},targetId={},uniqueId={} )", clientId, targetId, uniqueId);
+	public void cancelSms(String clientId, String instanceId) {
+		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelSms({},{})", clientId, instanceId);
 		throw new NotImplementedException("SmsScheduleService::cancelSms");
 	}
 
 	@Transactional
 	public void cancelAllForClient(String clientId) {
-		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelAllForClient( clientId={} )", clientId);
+		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelAllForClient({})", clientId);
 		throw new NotImplementedException("SmsScheduleService::cancelAllForClient");
 	}
 
     @Transactional
     public void cancelAllForTarget(String clientId, String targetId) {
-        LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelAllForTarget( clientId={}, targetId={} )", clientId, targetId);
+        LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelAllForTarget({},{})", clientId, targetId);
         throw new NotImplementedException("SmsScheduleService::cancelAllForTarget");
+    }
+    
+    @Transactional
+    public void cancelByClientKey(String clientId, String clientKey) {
+        LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelByKey({}, {} )", clientId, clientKey);
+        throw new NotImplementedException("SmsScheduleService::cancelByKey");
     }
     
     @Transactional
@@ -88,7 +96,8 @@ public class SmsSchedulerService {
         LOG.trace("SmsSchedulerService::getSmsStatus(id={})", id);
         
         HistoricProcessInstance hpi = historyService.createHistoricProcessInstanceQuery()
-                .processDefinitionKey(Constants.APP_PROCESS_NAME)
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+                .processInstanceId(id)
                 .includeProcessVariables()
                 .singleResult();
         
@@ -107,7 +116,7 @@ public class SmsSchedulerService {
 
         return historyService
             .createHistoricProcessInstanceQuery()
-            .processDefinitionKey(Constants.APP_PROCESS_NAME)
+            .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
             .orderByProcessInstanceStartTime().asc()
             .includeProcessVariables()
             .list().stream()
@@ -121,7 +130,7 @@ public class SmsSchedulerService {
 
 		return historyService
 			.createHistoricProcessInstanceQuery()
-			.processDefinitionKey(Constants.APP_PROCESS_NAME)
+			.processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
 			.variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
 			.orderByProcessInstanceStartTime().asc()
 			.includeProcessVariables()
@@ -136,7 +145,7 @@ public class SmsSchedulerService {
     	
 		return historyService
         		.createHistoricProcessInstanceQuery()
-                .processDefinitionKey(Constants.APP_PROCESS_NAME)
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
          		.variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
         		.variableValueEquals(Constants.VAR_TARGET_ID, targetId)
         		.includeProcessVariables()
@@ -152,7 +161,7 @@ public class SmsSchedulerService {
         
         return historyService
                 .createHistoricProcessInstanceQuery()
-                .processDefinitionKey(Constants.APP_PROCESS_NAME)
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
                 .variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
                 .variableValueEquals(Constants.VAR_CLIENT_KEY, clientKey)
                 .includeProcessVariables()
@@ -160,6 +169,12 @@ public class SmsSchedulerService {
                 .list().stream()
                 .map(this::hpiToSmsStatus)
                 .toList();
+    }
+    
+    @Transactional
+    public void deleteInstance(String instanceId) {
+        runtimeService.deleteProcessInstance(instanceId, null);
+        historyService.deleteHistoricProcessInstance(instanceId);
     }
 
     private SmsStatus hpiToSmsStatus(HistoricProcessInstance hpi) {

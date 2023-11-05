@@ -9,7 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,6 +45,31 @@ public class SchedulerRestController {
     @Autowired
     private SmsSchedulerService theService;
 
+    // SCHEDULE -----------------------------------------------------------------------------------
+    
+    /* Request from client; all fields except schedule and payload can be absent. */
+    private final record Request(String target, String key, String schedule, String payload) { }
+
+    /**
+     * POST a new scheduled SMS.
+     * @param clientId path variable identifying the client (tenant) for whom the send is
+     * @param req body Request object with with at least fields schedule and payload, optional target and key
+     * @return the status of the SMS (@TODO@ will always be NEW or BLOCKED?)
+     */
+    @PostMapping(path = "{clientId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
+    public SmsStatus postClient(@PathVariable String clientId, @RequestBody Request req) {
+        LOG.trace("REST POST /schedule/{}", clientId);
+        return theService.scheduleSms(clientId, req.target, req.key, req.schedule, req.payload);
+    }
+    
+    // QUERY --------------------------------------------------------------------------------------
+    
+    /**
+     * GET the list of scheduled SMS
+     * @param clientId path variable identifying the client (tenant)
+     * @return list of SMS status objects
+     */
     @GetMapping(path = "{clientId}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public List<SmsStatus> getClient(@PathVariable String clientId) {
@@ -53,6 +77,12 @@ public class SchedulerRestController {
         return theService.getStatusList(clientId);
     }
 
+    /**
+     * GET the status of exactly one SMS
+     * @param clientId path variable identifying the client (tenant)
+     * @param instanceId the unique server-provided instance ID of the schedule
+     * @return the SMS status or NOT_FOUND
+     */
     @GetMapping(path = "{clientId}/by-id/{instanceId}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public SmsStatus getById(@PathVariable String clientId, @PathVariable String instanceId) {
@@ -65,6 +95,12 @@ public class SchedulerRestController {
         return smsStatus;
     }
     
+    /**
+     * GET status list for all SMS scheduled for a target
+     * @param clientId path variable identifying the client (tenant)
+     * @param targetId the client-provided identifier of the target (recipient)
+     * @return list of SMS status objects
+     */
     @GetMapping(path = "{clientId}/by-target/{targetId}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public List<SmsStatus> getByTarget(@PathVariable String clientId, @PathVariable String targetId) {
@@ -72,6 +108,13 @@ public class SchedulerRestController {
         return theService.getStatusListByTarget(clientId, targetId);
     }
     
+    /**
+     * GET status list for all SMS marked by the client with a certain client key
+     * (ideally unique but this is up to the client).
+     * @param clientId path variable identifying the client (tenant)
+     * @param clientKey the client-provided identifier of the message send
+     * @return list of SMS status objects
+     */
     @GetMapping(path = "{clientId}/by-key/{clientKey}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public List<SmsStatus> getByKey(@PathVariable String clientId, @PathVariable String clientKey) {
@@ -79,17 +122,13 @@ public class SchedulerRestController {
         return theService.getStatusListByClientKey(clientId, clientKey);
     }
 
-    /* Request from client; all fields except schedule and payload can be absent. */
-    private final record Request(String target, String key, String schedule, String payload) { }
+    // CANCEL -------------------------------------------------------------------------------------
     
-    @PostMapping(path = "{clientId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
-    public SmsStatus postClient(@PathVariable String clientId, @RequestBody Request req) {
-        LOG.trace("REST POST /schedule/{}", clientId);
-        // TODO: check req.client == clientId
-        return theService.scheduleSms(clientId, req.target, req.key, req.schedule, req.payload);
-    }
-    
+    /**
+     * DELETE (cancel) ALL scheduled SMS for a client
+     * @param clientId the client ID for which to delete the SMS
+     * @param confirm request parameter that must be present with value 'yes-i-am-sure' as a safeguard
+     */
     @DeleteMapping(path = "{clientId}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public void deleteClient(@PathVariable String clientId, @RequestParam String confirm) {
@@ -102,33 +141,55 @@ public class SchedulerRestController {
         }
     }
 
-    @DeleteMapping(path = "{clientId}/{targetId}")
+    /**
+     * DELETE (cancel) one scheduled SMS
+     * @param clientId path variable identifying the client (tenant)
+     * @param targetId the client-provided identifier of the target (recipient)
+     */
+    @DeleteMapping(path = "{clientId}/by-id/{targetId}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
-    public void deleteClientTarget(@PathVariable String clientId, @PathVariable String targetId) {
-        LOG.trace("REST DELETE /schedule/{}/{}", clientId, targetId);
+    public void deleteByInstanceId(@PathVariable String clientId, @PathVariable String instanceId) {
+        LOG.trace("REST DELETE /schedule/{}/by-id/{}", clientId, instanceId);
+        theService.cancelSms(clientId, instanceId);
+    }
+
+    /**
+     * DELETE (cancel) all scheduled SMS for a target
+     * @param clientId path variable identifying the client (tenant)
+     * @param targetId the client-provided identifier of the target (recipient)
+     */
+    @DeleteMapping(path = "{clientId}/by-target/{targetId}")
+    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
+    public void deleteByTarget(@PathVariable String clientId, @PathVariable String targetId) {
+        LOG.trace("REST DELETE /schedule/{}/by-target/{}", clientId, targetId);
         theService.cancelAllForTarget(clientId, targetId);
     }
 
-    @DeleteMapping(path = "{clientId}/{targetId}/{uniqueId}")
+    /**
+     * DELETE (cancel) scheduled SMS by client-provided key
+     * @param clientId path variable identifying the client (tenant)
+     * @param clientKey the client-provided identifier of the SMS
+     */
+    @DeleteMapping(path = "{clientId}/by-key/{clientKey}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
-    public void deleteClientTargetUnique(@PathVariable String clientId, @PathVariable String targetId, @PathVariable String uniqueId) {
-        LOG.trace("REST DELETE /schedule/{}/{}/{}", clientId, targetId, uniqueId);
-        theService.cancelSms(clientId, targetId, uniqueId);
+    public void deleteByKey(@PathVariable String clientId, @PathVariable String clientKey) {
+        LOG.trace("REST DELETE /schedule/{}/by-key/{}", clientId, clientKey);
+        theService.cancelByClientKey(clientId, clientKey);
     }
 
     // Helpers
 
-    private boolean loginIsUser(String id) {
-        return id.equals(SecurityContextHolder.getContext().getAuthentication().getName());
-    }
-
-    private boolean loginHasRole(String role) {
-        return loginHasAuthority("ROLE_" + role);
-    }
-    
-    private boolean loginHasAuthority(String authority) {
-        return SecurityContextHolder.getContext().getAuthentication()
-                .getAuthorities().stream().map(Object::toString)
-                .anyMatch(authority::equals);
-    }
+//    private boolean loginIsUser(String id) {
+//        return id.equals(SecurityContextHolder.getContext().getAuthentication().getName());
+//    }
+//
+//    private boolean loginHasRole(String role) {
+//        return loginHasAuthority("ROLE_" + role);
+//    }
+//    
+//    private boolean loginHasAuthority(String authority) {
+//        return SecurityContextHolder.getContext().getAuthentication()
+//                .getAuthorities().stream().map(Object::toString)
+//                .anyMatch(authority::equals);
+//    }
 }

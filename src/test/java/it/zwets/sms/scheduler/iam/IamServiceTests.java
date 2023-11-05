@@ -42,7 +42,7 @@ class IamServiceTests {
 
     @Test
     void testClientPresent() {
-        assertNotNull(svc.getGroup(Flavour.CLIENT, IamService.TEST_GROUP));
+        assertNotNull(svc.getGroup(Flavour.CLIENT, IamService.TEST_CLIENT));
     }
     
     @Test
@@ -62,7 +62,7 @@ class IamServiceTests {
     
     @Test
     void noTestRolePresent() {
-        assertNull(svc.getGroup(Flavour.ROLE, IamService.TEST_GROUP));
+        assertNull(svc.getGroup(Flavour.ROLE, IamService.TEST_CLIENT));
     }
     
     @Test
@@ -146,8 +146,8 @@ class IamServiceTests {
    
     @Test
     void testUpdateGroups() {
-        String[] oldgroups = { IamService.ADMINS_GROUP, IamService.TEST_GROUP };
-        String[] newgroups = { IamService.TEST_GROUP, IamService.USERS_GROUP };
+        String[] oldgroups = { IamService.ADMINS_GROUP, IamService.TEST_CLIENT };
+        String[] newgroups = { IamService.TEST_CLIENT, IamService.USERS_GROUP };
         
         final String id = "newid7";
         
@@ -159,7 +159,7 @@ class IamServiceTests {
         
         account = svc.getAccount(id);
         assertEquals(2, account.groups().length);
-        assertEquals(IamService.TEST_GROUP, account.groups()[0]);
+        assertEquals(IamService.TEST_CLIENT, account.groups()[0]);
         assertEquals(IamService.USERS_GROUP, account.groups()[1]);
     }
     
@@ -175,12 +175,12 @@ class IamServiceTests {
 
     @Test
     void adminUserInTest() {
-        assertTrue(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.TEST_GROUP));
+        assertTrue(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.TEST_CLIENT));
     }
     
     @Test
     void getUserInGroup() {
-        assertNotNull(svc.getAccountInGroup(IamService.TEST_GROUP, IamService.INITIAL_ADMIN));
+        assertNotNull(svc.getAccountInGroup(IamService.TEST_CLIENT, IamService.INITIAL_ADMIN));
     }
     
     @Test
@@ -212,11 +212,11 @@ class IamServiceTests {
 
     @Test
     void testRemoveAdminUserFromGroup() {
-        svc.removeAccountFromGroup(IamService.INITIAL_ADMIN, IamService.TEST_GROUP);
-        assertFalse(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.TEST_GROUP));
+        svc.removeAccountFromGroup(IamService.INITIAL_ADMIN, IamService.TEST_CLIENT);
+        assertFalse(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.TEST_CLIENT));
         
-        svc.addAccountToGroup(IamService.INITIAL_ADMIN, IamService.TEST_GROUP);
-        assertTrue(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.TEST_GROUP));
+        svc.addAccountToGroup(IamService.INITIAL_ADMIN, IamService.TEST_CLIENT);
+        assertTrue(svc.isAccountInGroup(IamService.INITIAL_ADMIN, IamService.TEST_CLIENT));
     }
 
     @Test

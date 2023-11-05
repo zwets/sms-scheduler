@@ -90,7 +90,7 @@ public class IamService {
 
     public static final String USERS_GROUP = "users";
     public static final String ADMINS_GROUP = "admins";
-    public static final String TEST_GROUP = "test";
+    public static final String TEST_CLIENT = "test";
 
     public static final String INITIAL_ADMIN = "admin";
     public static final String INITIAL_PASSWORD = "test";
@@ -107,7 +107,7 @@ public class IamService {
 
             createGroup(Flavour.ROLE, USERS_GROUP);
             createGroup(Flavour.ROLE, ADMINS_GROUP);
-            createGroup(Flavour.CLIENT, TEST_GROUP);
+            createGroup(Flavour.CLIENT, TEST_CLIENT);
 
             LOG.info("create out-of-box admin account {} with password {}", INITIAL_ADMIN, INITIAL_PASSWORD);
 
@@ -116,7 +116,7 @@ public class IamService {
                     "Default Admin User",
                     "nobody@example.com",
                     INITIAL_PASSWORD,
-                    new String[]{ USERS_GROUP, ADMINS_GROUP, TEST_GROUP }));
+                    new String[]{ USERS_GROUP, ADMINS_GROUP, TEST_CLIENT }));
 
             LOG.warn("**IMPORTANT** remove the out-of-box {} account once you have"
                     + " used it set up an admin account for yourself", INITIAL_ADMIN);

@@ -54,13 +54,13 @@ class IamRestControllerTests {
     @BeforeEach
     public void setup() {
         rest.createAccount("nnn", new String[] { });
-        rest.createAccount("nnt", new String[] { IamService.TEST_GROUP });
+        rest.createAccount("nnt", new String[] { IamService.TEST_CLIENT });
         rest.createAccount("nan", new String[] { IamService.ADMINS_GROUP });
-        rest.createAccount("nat", new String[] { IamService.ADMINS_GROUP, IamService.TEST_GROUP });
+        rest.createAccount("nat", new String[] { IamService.ADMINS_GROUP, IamService.TEST_CLIENT });
         rest.createAccount("unn", new String[] { IamService.USERS_GROUP });
-        rest.createAccount("unt", new String[] { IamService.USERS_GROUP, IamService.TEST_GROUP });
+        rest.createAccount("unt", new String[] { IamService.USERS_GROUP, IamService.TEST_CLIENT });
         rest.createAccount("uan", new String[] { IamService.USERS_GROUP, IamService.ADMINS_GROUP });
-        rest.createAccount("uat", new String[] { IamService.USERS_GROUP, IamService.ADMINS_GROUP, IamService.TEST_GROUP });
+        rest.createAccount("uat", new String[] { IamService.USERS_GROUP, IamService.ADMINS_GROUP, IamService.TEST_CLIENT });
         rest.createAccount("dummy", new String[] { });
     }
     
@@ -299,7 +299,7 @@ class IamRestControllerTests {
     public void updateSelfAccountCannotChangeGroups() {
         String u = "unt";
         ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/%s".formatted(u), userJson(u, "New Name", "new@example.com", null, 
-                new String[] { IamService.ADMINS_GROUP, IamService.USERS_GROUP, IamService.TEST_GROUP }));
+                new String[] { IamService.ADMINS_GROUP, IamService.USERS_GROUP, IamService.TEST_CLIENT }));
         assertEquals(HttpStatus.OK, response.getStatusCode());
         
         AccountDetail account = deserializeAccount(response);
@@ -308,7 +308,7 @@ class IamRestControllerTests {
         assertEquals("new@example.com", account.email());
         assertNull(account.password());
         assertTrue(Arrays.asList(account.groups()).contains(IamService.USERS_GROUP));
-        assertTrue(Arrays.asList(account.groups()).contains(IamService.TEST_GROUP));
+        assertTrue(Arrays.asList(account.groups()).contains(IamService.TEST_CLIENT));
         assertFalse(Arrays.asList(account.groups()).contains(IamService.ADMINS_GROUP));
         assertEquals(2, account.groups().length);
     }
@@ -317,17 +317,17 @@ class IamRestControllerTests {
     public void updateAdminSelfAccountCanChangeGroups() {
         String u = "nan";
         ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/%s".formatted(u), userJson(u, null, null, null, 
-                new String[] { IamService.ADMINS_GROUP, IamService.TEST_GROUP }));
+                new String[] { IamService.ADMINS_GROUP, IamService.TEST_CLIENT }));
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(iamService.isAccountInGroup(u, IamService.TEST_GROUP));
-        iamService.removeAccountFromGroup(u, IamService.TEST_GROUP);
+        assertTrue(iamService.isAccountInGroup(u, IamService.TEST_CLIENT));
+        iamService.removeAccountFromGroup(u, IamService.TEST_CLIENT);
     }
     
     @Test
     public void updateAdminSelfAccountCannotRemoveAdminRole() {
         String u = "nan";
         ResponseEntity<String> response = rest.PUT(u, "/iam/accounts/%s".formatted(u), userJson(u, null, null, null, 
-                new String[] { IamService.TEST_GROUP }));
+                new String[] { IamService.TEST_CLIENT }));
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
     }
     
@@ -698,7 +698,7 @@ class IamRestControllerTests {
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
-        // Helpers
+        // Helpers - parse JSON
     
     private JsonNode asJson(ResponseEntity<String> response) {
         return parseJson(response.getBody());
@@ -729,7 +729,9 @@ class IamRestControllerTests {
         
         return new AccountDetail(id, name, email, password, groups);
     }
-    
+
+        // Helpers - produce JSON
+
     private String simpleUserJson(String name, String... groups) {
         return userJson(name, name, name, name, groups);
     }
@@ -766,6 +768,8 @@ class IamRestControllerTests {
         return ss == null ? "null" : 
             "[ " + Arrays.stream(ss).map(s -> "\"%s\"".formatted(s)).collect(Collectors.joining(",")) + " ]";
     }
+    
+        // Helpers - accounts
     
     private String[] all_accounts =            { "nnn", "nnt", "nan", "nat", "unn", "unt", "uan", "uat" };
 //    private String[] nouser_noadmin_accounts = { "nnn", "nnt" };

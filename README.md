@@ -28,7 +28,9 @@ Overview of Mechanism:
  * Client encrypts the SMS payload, which includes both destination number
    and message content, with the public key of the backend SMS gateway
  * Client hands payload with delivery schedule to SMS Scheduler, as well as
-   an optional unique key to later refer to this scheduled SMS
+   two optional keys to later refer to the (group of) SMS:
+   * Target ID, a "moniker" for the destination / receiver of the SMS
+   * Instance ID, to reference this specific SMS send
  * The SMS Scheduler, not having the private key, has no access to the
    plaintext payload
  * At the scheduled time, SMS Scheduler forwards the payload as-is to the
@@ -42,13 +44,15 @@ Overview of Implementation
 
  * The SMS Scheduler is a standalone WAR that can either be deployed on
    Tomcat or run standalone on Java 17+ using its embedded Tomcat server
+ * The scheduler consumes requests from Kafka channel 'schedule-sms' and
+   from REST requests; it can be queried over REST.
  * It is built on top of the [Flowable](https://flowable.org) process
    engine using Spring Boot 3.
  * A database (PostgreSQL or other) is required for maintaining process
    state
  * A backend SMS Gateway is required to handle the actual transmission of
-   the SMS to the SMSC; communication is over a Kafka topic
- * Clients submit requests over REST or a Kafka topic
+   the SMS to the SMSC; communication is over Kafka topics 'send-sms' and
+   'sms-status'
 
 
 ## Technical Details

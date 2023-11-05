@@ -3,6 +3,7 @@ package it.zwets.sms.scheduler;
 import java.time.Duration;
 import java.time.ZoneOffset;
 
+import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.RuntimeService;
 import org.flowable.idm.api.IdmIdentityService;
 import org.slf4j.Logger;
@@ -65,8 +66,8 @@ public class SmsSchedulerConfiguration {
      * @param runtimeService
      * @param idmIdentityService
      */
-    public SmsSchedulerConfiguration(RuntimeService runtimeService, IdmIdentityService idmIdentityService) {
-        this.runtimeService = runtimeService;
+    public SmsSchedulerConfiguration(ProcessEngine processEngine, IdmIdentityService idmIdentityService) {
+        this.runtimeService = processEngine.getRuntimeService();
         this.idmIdentityService = idmIdentityService;
     }
     
@@ -125,7 +126,8 @@ public class SmsSchedulerConfiguration {
 
         // Process names and globals
         
-        public static final String APP_PROCESS_NAME = "smsSchedulerProcess";
+        public static final String SMS_SCHEDULER_PROCESS_NAME = "smsSchedulerProcess";
+        public static final String BLOCK_TARGET_PROCESS_NAME = "blockTargetProcess";
         
         // Variable names (set on the process instance)
 

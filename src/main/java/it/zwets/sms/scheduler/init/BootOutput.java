@@ -28,7 +28,7 @@ public class BootOutput implements CommandLineRunner {
         System.out.println("Number of process definitions: "
            + repositoryService.createProcessDefinitionQuery().count());
         System.out.println("Number of SMS scheduled processes: "
-                + runtimeService.createProcessInstanceQuery().processDefinitionKey(Constants.APP_PROCESS_NAME).count());
+                + runtimeService.createProcessInstanceQuery().processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME).count());
         
         // TODO: add historical processes
         // TODO: send SMS at start of server
