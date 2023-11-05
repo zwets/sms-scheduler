@@ -149,7 +149,7 @@ public class SmsSchedulerConfiguration {
         
         // Values for the VAR_SMS_STATUS variable
         
-        public static final String SMS_STATUS_NEW = "NEW"; // TODO: remove or replace
+        public static final String SMS_STATUS_NEW = "NEW";
         public static final String SMS_STATUS_SCHEDULED = "SCHEDULED";
         public static final String SMS_STATUS_ENROUTE = "ENROUTE";
         public static final String SMS_STATUS_EXPIRED = "EXPIRED";
@@ -165,5 +165,9 @@ public class SmsSchedulerConfiguration {
         public static final String EVENT_KEY_SEND_SMS = "sendSmsEvent";
         public static final String CHANNEL_SMS_STATUS = "smsStatusChannel";
         public static final String EVENT_KEY_SMS_STATUS = "smsStatusEvent";
+        
+        // Activity names for programmatic triggering
+        
+        public static final String ACTIVITY_RECV_CANCEL = "recvCancel";
     }
 }

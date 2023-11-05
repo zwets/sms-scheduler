@@ -63,11 +63,16 @@ public class TriageDelegate implements JavaDelegate {
             smsDueTime = scheduler.getFirstAvailableInstant();
             
             if (smsDueTime != null) {
-                long jitter = Math.round(Math.random() * maxAddJitter.getSeconds());
-                LOG.debug("Adding {}s jitter", jitter);
                 
-                deadlineInstant = scheduler.getDeadlineInstant(smsDueTime).plusSeconds(jitter);
-                smsDueTime = smsDueTime.plusSeconds(jitter);
+                // Unless SMS is due in the next minute, add (configurable) random jitter
+                if (smsDueTime.isAfter(Instant.now().plusMillis(60 * 1000))) {
+
+                    long jitter = Math.round(Math.random() * maxAddJitter.getSeconds());
+                    LOG.debug("Adding {}s jitter", jitter);
+                    
+                    deadlineInstant = scheduler.getDeadlineInstant(smsDueTime).plusSeconds(jitter);
+                    smsDueTime = smsDueTime.plusSeconds(jitter);
+                }
 
                 LOG.info("Scheduling new request: {}:{}:{}:{}:{}",
                         StringUtils.substringBefore(execution.getProcessInstanceId(),'-'),

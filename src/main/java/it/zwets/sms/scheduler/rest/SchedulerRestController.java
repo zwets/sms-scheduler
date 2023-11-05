@@ -150,7 +150,7 @@ public class SchedulerRestController {
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public void deleteByInstanceId(@PathVariable String clientId, @PathVariable String instanceId) {
         LOG.trace("REST DELETE /schedule/{}/by-id/{}", clientId, instanceId);
-        theService.cancelSms(clientId, instanceId);
+        theService.cancelSms(instanceId);
     }
 
     /**

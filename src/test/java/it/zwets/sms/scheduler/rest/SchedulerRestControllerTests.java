@@ -6,17 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -34,10 +31,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 import it.zwets.sms.scheduler.SmsSchedulerService;
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
 import it.zwets.sms.scheduler.iam.IamService;
-import it.zwets.sms.scheduler.iam.IamService.AccountDetail;
 import it.zwets.sms.scheduler.util.Scheduler;
 import it.zwets.sms.scheduler.util.Slot;
 
@@ -94,9 +91,24 @@ class SchedulerRestControllerTests {
     }
     
     @Test
-    public void postSimple() {
+    public void perpetratorRequestOnClientUnauthorised() {
+        ResponseEntity<String> response = new TestRestTemplate("test", "hacker")
+                .getForEntity("http://localhost:" + port + "/schedule/test", String.class);
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+    
+    @Test
+    public void authenticatedRequestOnOtherClientForbidden() {
+        ResponseEntity<String> response = rest.POST("/schedule/not-my-client", simpleRequest());
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
+    
+    @Test
+    public void testBasics() {
+        
         ResponseEntity<String> response = rest.POST("/schedule/test", simpleRequest());
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        
         SmsStatus s = deserializeStatus(response);
         String id = s.id();
         assertNotNull(id);
@@ -107,8 +119,40 @@ class SchedulerRestControllerTests {
         assertNotNull(s.started());
         assertNull(s.ended());
         assertEquals(0, s.retries());
+
+        response = rest.GET("/schedule/test/by-id/" + id);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        SmsStatus r = deserializeStatus(response);
+        assertNotNull(r);
         
-        assertEquals(1, schedulerService.getStatusList().size());
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, r.status());
+        assertEquals(s.id(), r.id());
+        assertEquals(s.client(), r.client());
+        assertEquals(s.target(), r.target());
+        assertEquals(s.key(), r.key());
+        assertEquals(s.started(), r.started());
+        assertEquals(s.ended(), r.ended());
+        assertEquals(s.retries(), r.retries());
+    
+        response = rest.DELETE("/schedule/test/by-id/" + id);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        response = rest.GET("/schedule/test/by-id/" + id);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        r = deserializeStatus(response);
+        assertNotNull(r);
+        
+        assertEquals(Constants.SMS_STATUS_CANCELED, r.status());
+        assertNotNull(r.ended());
+
+        assertEquals(s.id(), r.id());
+        assertEquals(s.client(), r.client());
+        assertEquals(s.target(), r.target());
+        assertEquals(s.key(), r.key());
+        assertEquals(s.started(), r.started());
+        assertEquals(s.retries(), r.retries());
     }
 
         // Helpers - deserialise JSON
@@ -144,7 +188,6 @@ class SchedulerRestControllerTests {
     }
     
     private List<SmsStatus> deserializeStatusList(ResponseEntity<String> entity) {
-        
         List<SmsStatus> result = new ArrayList<SmsStatus>();
         Iterator<JsonNode> iter = asJson(entity).elements();
         

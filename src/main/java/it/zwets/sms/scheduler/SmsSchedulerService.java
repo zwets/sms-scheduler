@@ -4,11 +4,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.history.HistoricProcessInstance;
+import org.flowable.engine.runtime.Execution;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +38,9 @@ public class SmsSchedulerService {
         this.historyService = processEngine.getHistoryService();
         this.dateHelper = dateHelper;
     }
+    
+    // Scheduling ---------------------------------------------------------------------------------
+
     /**
      * Schedule an SMS
      * 
@@ -66,37 +69,78 @@ public class SmsSchedulerService {
 		
 		return new SmsStatus(pi.getId(), clientId, targetId, clientKey, Constants.SMS_STATUS_NEW, dateHelper.format(pi.getStartTime()), null, 0);
     }
+	
+	// Cancel ----------------------------------------------------------------------------------------
 
 	@Transactional
-	public void cancelSms(String clientId, String instanceId) {
-		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelSms({},{})", clientId, instanceId);
-		throw new NotImplementedException("SmsScheduleService::cancelSms");
+	public void cancelSms(String instanceId) {
+		LOG.trace("cancelSms({})", instanceId);
+
+		Execution ex = runtimeService.createExecutionQuery()
+                .processInstanceId(instanceId)
+		        .activityId(Constants.ACTIVITY_RECV_CANCEL)
+		        .singleResult();
+		
+		if (ex != null) {
+		    LOG.debug("Canceling SMS {}", instanceId);
+		    runtimeService.trigger(ex.getId());
+		}
 	}
 
-	@Transactional
-	public void cancelAllForClient(String clientId) {
-		LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelAllForClient({})", clientId);
-		throw new NotImplementedException("SmsScheduleService::cancelAllForClient");
-	}
-
-    @Transactional
-    public void cancelAllForTarget(String clientId, String targetId) {
-        LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelAllForTarget({},{})", clientId, targetId);
-        throw new NotImplementedException("SmsScheduleService::cancelAllForTarget");
-    }
-    
     @Transactional
     public void cancelByClientKey(String clientId, String clientKey) {
-        LOG.error("NOT IMPLEMENTED: SmsSchedulerService::cancelByKey({}, {} )", clientId, clientKey);
-        throw new NotImplementedException("SmsScheduleService::cancelByKey");
+        LOG.trace("cancelByClientKey({},{})", clientId, clientKey);
+        
+        for (Execution ex : runtimeService.createExecutionQuery()
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+                .activityId(Constants.ACTIVITY_RECV_CANCEL)
+                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .processVariableValueEquals(Constants.VAR_CLIENT_KEY, clientKey)
+                .list())
+        {
+            LOG.debug("Canceling SMS by key {}:{}: {}", clientId, clientKey, ex.getProcessInstanceId());
+            runtimeService.trigger(ex.getId());
+        }
     }
     
+    @Transactional
+    public void cancelAllForTarget(String clientId, String targetId) {
+        LOG.debug("cancelAllForTarget({},{})", clientId, targetId);
+        
+        for (Execution ex : runtimeService.createExecutionQuery()
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+                .activityId(Constants.ACTIVITY_RECV_CANCEL)
+                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .processVariableValueEquals(Constants.VAR_TARGET_ID, targetId)
+                .list())
+        {
+            LOG.debug("Canceling SMS for target {}:{}: {}", clientId, targetId, ex.getProcessInstanceId());
+            runtimeService.trigger(ex.getId());
+        }
+    }
+    
+	@Transactional
+	public void cancelAllForClient(String clientId) {
+        LOG.trace("cancelAllForClient({})", clientId);
+        
+        for (Execution ex : runtimeService.createExecutionQuery()
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+                .activityId(Constants.ACTIVITY_RECV_CANCEL)
+                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .list())
+        {
+            LOG.debug("Canceling SMS for client {}: {}", clientId, ex.getProcessInstanceId());
+            runtimeService.trigger(ex.getId());
+        }
+	}
+	
+	// Query --------------------------------------------------------------------------------------
+
     @Transactional
     public SmsStatus getSmsStatus(String id) {
         LOG.trace("SmsSchedulerService::getSmsStatus(id={})", id);
         
         HistoricProcessInstance hpi = historyService.createHistoricProcessInstanceQuery()
-                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
                 .processInstanceId(id)
                 .includeProcessVariables()
                 .singleResult();
@@ -171,11 +215,17 @@ public class SmsSchedulerService {
                 .toList();
     }
     
+    // Deleting (internal only) -------------------------------------------------------------------
+    
     @Transactional
     public void deleteInstance(String instanceId) {
-        runtimeService.deleteProcessInstance(instanceId, null);
+        if (runtimeService.createProcessInstanceQuery().processInstanceId(instanceId).count() != 0) {
+            runtimeService.deleteProcessInstance(instanceId, null);
+        }
         historyService.deleteHistoricProcessInstance(instanceId);
     }
+    
+    // Helpers ------------------------------------------------------------------------------------
 
     private SmsStatus hpiToSmsStatus(HistoricProcessInstance hpi) {
         var pvs = hpi.getProcessVariables();
