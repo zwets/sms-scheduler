@@ -60,15 +60,17 @@ public class SmsSchedulerConfiguration {
 
     private final RuntimeService runtimeService;
     private final IdmIdentityService idmIdentityService;
+    private final TargetBlockerService targetBlockerService;
     
     /**
      * Public constructor
      * @param runtimeService
      * @param idmIdentityService
      */
-    public SmsSchedulerConfiguration(ProcessEngine processEngine, IdmIdentityService idmIdentityService) {
+    public SmsSchedulerConfiguration(ProcessEngine processEngine, IdmIdentityService idmIdentityService, TargetBlockerService targetBlockerService) {
         this.runtimeService = processEngine.getRuntimeService();
         this.idmIdentityService = idmIdentityService;
+        this.targetBlockerService = targetBlockerService;
     }
     
     @Bean 
@@ -84,7 +86,7 @@ public class SmsSchedulerConfiguration {
     
     @Bean
     public TriageDelegate triageDelegate() {
-        return new TriageDelegate(waitAfterFail, maxAddJitter);
+        return new TriageDelegate(targetBlockerService, waitAfterFail, maxAddJitter);
     }
     
     /**

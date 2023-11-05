@@ -146,10 +146,10 @@ public class SchedulerRestController {
      * @param clientId path variable identifying the client (tenant)
      * @param targetId the client-provided identifier of the target (recipient)
      */
-    @DeleteMapping(path = "{clientId}/by-id/{targetId}")
+    @DeleteMapping(path = "{clientId}/by-id/{instanceId}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public void deleteByInstanceId(@PathVariable String clientId, @PathVariable String instanceId) {
-        LOG.trace("REST DELETE /schedule/{}/by-id/{}", clientId, instanceId);
+        LOG.error("REST DELETE /schedule/{}/by-id/{}", clientId, instanceId);
         theService.cancelSms(instanceId);
     }
 

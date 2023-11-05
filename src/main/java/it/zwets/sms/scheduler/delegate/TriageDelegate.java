@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
+import it.zwets.sms.scheduler.TargetBlockerService;
 import it.zwets.sms.scheduler.util.Scheduler;
 
 /**
@@ -21,6 +22,7 @@ public class TriageDelegate implements JavaDelegate {
 
     private static final Logger LOG = LoggerFactory.getLogger(TriageDelegate.class);
 
+    private final TargetBlockerService blockerService;
     private final Duration waitAfterFail;
     private final Duration maxAddJitter;
     
@@ -29,9 +31,10 @@ public class TriageDelegate implements JavaDelegate {
      * @param maxAddJitter maximum random duration to add to initial send
      * @param waitAfterFail duration to wait before rescheduling after fail
      */
-    public TriageDelegate(Duration waitAfterFail, Duration maxAddJitter) {
+    public TriageDelegate(TargetBlockerService blockerService, Duration waitAfterFail, Duration maxAddJitter) {
         LOG.debug("TriageDelegate created with "
                 + "waitAfterFail = {} and maxAddJitter = {}", waitAfterFail, maxAddJitter);
+        this.blockerService = blockerService;
         this.waitAfterFail = waitAfterFail;
         this.maxAddJitter = maxAddJitter;
     }
@@ -58,11 +61,20 @@ public class TriageDelegate implements JavaDelegate {
         Instant smsDueTime = null;
         Instant deadlineInstant = null;
         
+        if (blockerService.isTargetBlocked(clientId, targetId)) {
+            LOG.debug("Target is blocked: {}:{}", clientId, targetId);
+            execution.setVariable(Constants.VAR_SMS_STATUS, Constants.SMS_STATUS_BLOCKED);
+            
+            return;
+        }
+        
         if (smsRetries == -1) { // first time around
 
             smsDueTime = scheduler.getFirstAvailableInstant();
             
             if (smsDueTime != null) {
+                
+                deadlineInstant = scheduler.getDeadlineInstant(smsDueTime);
                 
                 // Unless SMS is due in the next minute, add (configurable) random jitter
                 if (smsDueTime.isAfter(Instant.now().plusMillis(60 * 1000))) {
@@ -70,8 +82,8 @@ public class TriageDelegate implements JavaDelegate {
                     long jitter = Math.round(Math.random() * maxAddJitter.getSeconds());
                     LOG.debug("Adding {}s jitter", jitter);
                     
-                    deadlineInstant = scheduler.getDeadlineInstant(smsDueTime).plusSeconds(jitter);
                     smsDueTime = smsDueTime.plusSeconds(jitter);
+                    deadlineInstant = deadlineInstant.plusSeconds(jitter);
                 }
 
                 LOG.info("Scheduling new request: {}:{}:{}:{}:{}",

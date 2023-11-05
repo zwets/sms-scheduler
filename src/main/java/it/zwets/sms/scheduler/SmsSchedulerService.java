@@ -23,11 +23,9 @@ public class SmsSchedulerService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerService.class);
 	
-	private RuntimeService runtimeService;
-
-	private HistoryService historyService;
-
-	private DateHelper dateHelper;
+	private final RuntimeService runtimeService;
+	private final HistoryService historyService;
+	private final DateHelper dateHelper;
 	
 	/** The DTO for reporting status */
     public final record SmsStatus(
@@ -69,70 +67,6 @@ public class SmsSchedulerService {
 		
 		return new SmsStatus(pi.getId(), clientId, targetId, clientKey, Constants.SMS_STATUS_NEW, dateHelper.format(pi.getStartTime()), null, 0);
     }
-	
-	// Cancel ----------------------------------------------------------------------------------------
-
-	@Transactional
-	public void cancelSms(String instanceId) {
-		LOG.trace("cancelSms({})", instanceId);
-
-		Execution ex = runtimeService.createExecutionQuery()
-                .processInstanceId(instanceId)
-		        .activityId(Constants.ACTIVITY_RECV_CANCEL)
-		        .singleResult();
-		
-		if (ex != null) {
-		    LOG.debug("Canceling SMS {}", instanceId);
-		    runtimeService.trigger(ex.getId());
-		}
-	}
-
-    @Transactional
-    public void cancelByClientKey(String clientId, String clientKey) {
-        LOG.trace("cancelByClientKey({},{})", clientId, clientKey);
-        
-        for (Execution ex : runtimeService.createExecutionQuery()
-                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
-                .activityId(Constants.ACTIVITY_RECV_CANCEL)
-                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
-                .processVariableValueEquals(Constants.VAR_CLIENT_KEY, clientKey)
-                .list())
-        {
-            LOG.debug("Canceling SMS by key {}:{}: {}", clientId, clientKey, ex.getProcessInstanceId());
-            runtimeService.trigger(ex.getId());
-        }
-    }
-    
-    @Transactional
-    public void cancelAllForTarget(String clientId, String targetId) {
-        LOG.debug("cancelAllForTarget({},{})", clientId, targetId);
-        
-        for (Execution ex : runtimeService.createExecutionQuery()
-                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
-                .activityId(Constants.ACTIVITY_RECV_CANCEL)
-                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
-                .processVariableValueEquals(Constants.VAR_TARGET_ID, targetId)
-                .list())
-        {
-            LOG.debug("Canceling SMS for target {}:{}: {}", clientId, targetId, ex.getProcessInstanceId());
-            runtimeService.trigger(ex.getId());
-        }
-    }
-    
-	@Transactional
-	public void cancelAllForClient(String clientId) {
-        LOG.trace("cancelAllForClient({})", clientId);
-        
-        for (Execution ex : runtimeService.createExecutionQuery()
-                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
-                .activityId(Constants.ACTIVITY_RECV_CANCEL)
-                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
-                .list())
-        {
-            LOG.debug("Canceling SMS for client {}: {}", clientId, ex.getProcessInstanceId());
-            runtimeService.trigger(ex.getId());
-        }
-	}
 	
 	// Query --------------------------------------------------------------------------------------
 
@@ -215,6 +149,70 @@ public class SmsSchedulerService {
                 .toList();
     }
     
+    // Cancel ----------------------------------------------------------------------------------------
+
+    @Transactional
+    public void cancelSms(String instanceId) {
+        LOG.trace("cancelSms({})", instanceId);
+
+        Execution ex = runtimeService.createExecutionQuery()
+                .processInstanceId(instanceId)
+                .activityId(Constants.ACTIVITY_RECV_CANCEL)
+                .singleResult();
+        
+        if (ex != null) {
+            LOG.debug("Canceling SMS {}", instanceId);
+            runtimeService.trigger(ex.getId());
+        }
+    }
+
+    @Transactional
+    public void cancelByClientKey(String clientId, String clientKey) {
+        LOG.trace("cancelByClientKey({},{})", clientId, clientKey);
+        
+        for (Execution ex : runtimeService.createExecutionQuery()
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+                .activityId(Constants.ACTIVITY_RECV_CANCEL)
+                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .processVariableValueEquals(Constants.VAR_CLIENT_KEY, clientKey)
+                .list())
+        {
+            LOG.debug("Canceling SMS by key {}:{}: {}", clientId, clientKey, ex.getProcessInstanceId());
+            runtimeService.trigger(ex.getId());
+        }
+    }
+    
+    @Transactional
+    public void cancelAllForTarget(String clientId, String targetId) {
+        LOG.debug("cancelAllForTarget({},{})", clientId, targetId);
+        
+        for (Execution ex : runtimeService.createExecutionQuery()
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+                .activityId(Constants.ACTIVITY_RECV_CANCEL)
+                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .processVariableValueEquals(Constants.VAR_TARGET_ID, targetId)
+                .list())
+        {
+            LOG.debug("Canceling SMS for target {}:{}: {}", clientId, targetId, ex.getProcessInstanceId());
+            runtimeService.trigger(ex.getId());
+        }
+    }
+    
+    @Transactional
+    public void cancelAllForClient(String clientId) {
+        LOG.trace("cancelAllForClient({})", clientId);
+        
+        for (Execution ex : runtimeService.createExecutionQuery()
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+                .activityId(Constants.ACTIVITY_RECV_CANCEL)
+                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .list())
+        {
+            LOG.debug("Canceling SMS for client {}: {}", clientId, ex.getProcessInstanceId());
+            runtimeService.trigger(ex.getId());
+        }
+    }
+        
     // Deleting (internal only) -------------------------------------------------------------------
     
     @Transactional

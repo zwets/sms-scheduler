@@ -1,8 +1,10 @@
 package it.zwets.sms.scheduler.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 import it.zwets.sms.scheduler.SmsSchedulerService;
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
+import it.zwets.sms.scheduler.TargetBlockerService;
 import it.zwets.sms.scheduler.iam.IamService;
 import it.zwets.sms.scheduler.util.Scheduler;
 import it.zwets.sms.scheduler.util.Slot;
@@ -53,6 +56,9 @@ class SchedulerRestControllerTests {
     @Autowired
     private SmsSchedulerService schedulerService;
     
+    @Autowired
+    private TargetBlockerService targetBlockerService;
+
     private RestTestHelper rest;
 
     @BeforeAll
@@ -99,14 +105,14 @@ class SchedulerRestControllerTests {
     
     @Test
     public void authenticatedRequestOnOtherClientForbidden() {
-        ResponseEntity<String> response = rest.POST("/schedule/not-my-client", simpleRequest());
+        ResponseEntity<String> response = rest.POST("/schedule/not-my-client", simpleRequest(0));
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
     }
     
     @Test
     public void testBasics() {
         
-        ResponseEntity<String> response = rest.POST("/schedule/test", simpleRequest());
+        ResponseEntity<String> response = rest.POST("/schedule/test", simpleRequest(10));
         assertEquals(HttpStatus.OK, response.getStatusCode());
         
         SmsStatus s = deserializeStatus(response);
@@ -153,9 +159,149 @@ class SchedulerRestControllerTests {
         assertEquals(s.key(), r.key());
         assertEquals(s.started(), r.started());
         assertEquals(s.retries(), r.retries());
+        
+        schedulerService.deleteInstance(id);
     }
 
-        // Helpers - deserialise JSON
+    @Test
+    public void testAlreadyExpired() {
+        
+        ResponseEntity<String> response = rest.POST("/schedule/test", simpleRequest(-100));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        
+        SmsStatus s = deserializeStatus(response);
+        String id = s.id();
+        assertEquals(Constants.SMS_STATUS_NEW, s.status());
+        assertNotNull(s.started());
+        assertNull(s.ended());
+
+        response = rest.GET("/schedule/test/by-id/" + id);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        SmsStatus r = deserializeStatus(response);
+        assertEquals(Constants.SMS_STATUS_EXPIRED, r.status());
+        assertNotNull(r.ended());
+    
+        response = rest.DELETE("/schedule/test/by-id/" + id);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        response = rest.GET("/schedule/test/by-id/" + id);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        r = deserializeStatus(response);
+        assertEquals(Constants.SMS_STATUS_EXPIRED, r.status());
+        
+        schedulerService.deleteInstance(id);
+    }
+
+    @Test
+    public void testBlockTarget() {
+        final String TARGET = "block-me";
+        
+        ResponseEntity<String> response = rest.PUT("/block/test/" + TARGET, "");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(targetBlockerService.isTargetBlocked("test", TARGET));
+
+        response = rest.GET("/block/test/" + TARGET, "");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        
+        response = rest.PUT("/block/test/" + TARGET, "");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertFalse(targetBlockerService.isTargetBlocked("test", TARGET));
+        
+        response = rest.GET("/block/test/" + TARGET, "");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+        
+    @Test
+    public void testBlockedDoesNotSchedule() {
+        final String TARGET = "block-me";
+        
+        ResponseEntity<String> response = rest.PUT("/block/test/" + TARGET, "");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        
+        response = rest.POST("/schedule/test", simpleRequest(TARGET, "key", 0));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        
+        SmsStatus s = deserializeStatus(response);
+        String id = s.id();
+
+        response = rest.GET("/schedule/test/by-id/" + id);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        SmsStatus r = deserializeStatus(response);
+        assertEquals(Constants.SMS_STATUS_BLOCKED, r.status());
+        assertNotNull(r.ended());
+    
+        schedulerService.deleteInstance(id);
+    }
+        
+
+    @Test
+    void testImmediateWithWait() {
+
+        ResponseEntity<String> response = rest.POST("/schedule/test", simpleRequest(0));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        SmsStatus s = deserializeStatus(response);
+        String id = s.id();
+        
+        waitForAsync(1);
+
+        response = rest.GET("/schedule/test/by-id/" + id);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        s = deserializeStatus(response);
+        assertEquals(Constants.SMS_STATUS_ENROUTE, s.status());
+        assertNull(s.ended());
+
+        schedulerService.deleteInstance(id);
+    }
+
+    @Test
+    void testDelayedWithWait() {
+
+        ResponseEntity<String> response = rest.POST("/schedule/test", simpleRequest(1));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        SmsStatus s = deserializeStatus(response);
+        String id = s.id();
+        
+        s = deserializeStatus(rest.GET("/schedule/test/by-id/" + id));
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, s.status());
+        
+        waitForAsync(2);
+
+        s = deserializeStatus(rest.GET("/schedule/test/by-id/" + id));
+        assertEquals(Constants.SMS_STATUS_ENROUTE, s.status());
+        assertNotNull(s.ended());
+
+        schedulerService.deleteInstance(id);
+    }
+
+    @Test
+    void testNoSendAck() {
+
+        ResponseEntity<String> response = rest.POST("/schedule/test", simpleRequest(0));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        SmsStatus s = deserializeStatus(response);
+        String id = s.id();
+        
+        waitForAsync(5);
+
+        response = rest.GET("/schedule/test/by-id/" + id);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        s = deserializeStatus(response);
+        assertEquals(Constants.SMS_STATUS_ENROUTE, s.status());
+        assertNotNull(s.ended());
+
+        schedulerService.deleteInstance(id);
+    }
+
+
+    // Helpers - deserialise JSON -----------------------------------------------------------------
     
     private JsonNode asJson(ResponseEntity<String> response) {
         return parseJson(response.getBody());
@@ -200,15 +346,16 @@ class SchedulerRestControllerTests {
 
         // Helpers - serialise to JSON
 
-    private String simpleRequest() {
-        return simpleRequest(null, null);
+    private String simpleRequest(int seconds) {
+        return simpleRequest(null, null, seconds);
     }
     
-    private String simpleRequest(String target, String key) {
-        long now = Instant.now().getEpochSecond();
-        String schedule = new Scheduler(new Slot[] { new Slot(now+20, now+30), new Slot(now, now+10) }).toString();
+    private String simpleRequest(String target, String key, int seconds) {
+        long due = Instant.now().getEpochSecond() + seconds;
+        String schedule = new Scheduler(new Slot[] { new Slot(due, due+5) }).toString();
         return smsJson(target, key, schedule, 
-                "DummyRequest for target:%s key:%s)".formatted(StringUtils.defaultString(target), StringUtils.defaultString(key)));
+                "DummyRequest for target:%s key:%s in %ds)"
+                .formatted(StringUtils.defaultString(target), StringUtils.defaultString(key), seconds));
     }
     
     private String smsJson(String target, String key, String schedule, String payload) {
@@ -230,16 +377,17 @@ class SchedulerRestControllerTests {
         return "\"%s\": %s".formatted(name, quote(value));
     }
     
-//    private String quotedField(String name, String[] value) {
-//        return "\"%s\": %s".formatted(name, quote(value));
-//    }
-    
     private String quote(String s) {
         return s == null ? "null" : "\"%s\"".formatted(s);
     }
     
-//    private String quote(String[] ss) {
-//        return ss == null ? "null" : 
-//            "[ " + Arrays.stream(ss).map(s -> "\"%s\"".formatted(s)).collect(Collectors.joining(",")) + " ]";
-//    }
+    private void waitForAsync(double seconds) {
+        LOG.debug("waiting for job executor {}s", seconds);
+        try {
+            Thread.sleep(Math.round(1000 * seconds));
+        }
+        catch (InterruptedException e) {
+            // ignore
+        }
+    }
 }

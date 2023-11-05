@@ -5,10 +5,10 @@
     "scheduleSmsChannel"
   ],
   "correlationParameters": [
-    { "name": "client", "type": "string" },
-    { "name": "target", "type": "string" }
   ],
   "payload": [
-    { "name": "action", "type": "string" }
+    { "name": "action", "type": "string" },
+    { "name": "client", "type": "string" },
+    { "name": "target", "type": "string" }
   ]
 }
