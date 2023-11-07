@@ -57,6 +57,19 @@ public class BlockerRestController {
     }
     
     /**
+     * GET the list of blocks.
+     * @param clientId path variable identifies the client (scope) that defined the target
+     * @param targetId path variable defining the block
+     * @return a plain text list of blocked targets
+     */
+    @GetMapping(path = "{clientId}", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
+    public String getBlocks(@PathVariable String clientId) {
+        LOG.trace("REST GET /block/{}", clientId);
+        return theService.getBlockedTargets(clientId);
+    }
+    
+    /**
      * GET an existing block.
      * @param clientId path variable identifies the client (scope) that defined the target
      * @param targetId path variable defining the block
@@ -69,18 +82,5 @@ public class BlockerRestController {
         if (!theService.isTargetBlocked(clientId, targetId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-    }
-    
-    /**
-     * GET the list of blocks.
-     * @param clientId path variable identifies the client (scope) that defined the target
-     * @param targetId path variable defining the block
-     * @return a plain text list of blocked targets
-     */
-    @GetMapping(path = "{clientId}", produces = MediaType.TEXT_PLAIN_VALUE)
-    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
-    public String getBlocks(@PathVariable String clientId) {
-        LOG.trace("REST GET /block/{}", clientId);
-        return theService.getBlockedTargets(clientId);
     }
 }    

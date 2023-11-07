@@ -202,14 +202,14 @@ class SchedulerRestControllerTests {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(targetBlockerService.isTargetBlocked("test", TARGET));
 
-        response = rest.GET("/block/test/" + TARGET, "");
+        response = rest.GET("/block/test/" + TARGET);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         
-        response = rest.PUT("/block/test/" + TARGET, "");
+        response = rest.DELETE("/block/test/" + TARGET);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertFalse(targetBlockerService.isTargetBlocked("test", TARGET));
         
-        response = rest.GET("/block/test/" + TARGET, "");
+        response = rest.GET("/block/test/" + TARGET);
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
         
@@ -274,7 +274,7 @@ class SchedulerRestControllerTests {
 
         s = deserializeStatus(rest.GET("/schedule/test/by-id/" + id));
         assertEquals(Constants.SMS_STATUS_ENROUTE, s.status());
-        assertNotNull(s.ended());
+        assertNull(s.ended());
 
         schedulerService.deleteInstance(id);
     }
@@ -295,7 +295,7 @@ class SchedulerRestControllerTests {
 
         s = deserializeStatus(response);
         assertEquals(Constants.SMS_STATUS_ENROUTE, s.status());
-        assertNotNull(s.ended());
+        assertNull(s.ended());
 
         schedulerService.deleteInstance(id);
     }

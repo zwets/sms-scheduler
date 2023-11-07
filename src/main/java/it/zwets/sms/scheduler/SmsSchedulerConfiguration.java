@@ -159,6 +159,9 @@ public class SmsSchedulerConfiguration {
         public static final String SMS_STATUS_DELIVERED = "DELIVERED";
         public static final String SMS_STATUS_CANCELED = "CANCELED";
         public static final String SMS_STATUS_BLOCKED = "BLOCKED";
+        // Backend values (apart from SENT, EXPIRED, DELIVERED)
+        public static final String SMS_STATUS_FAILED = "FAILED";    // was not delivered
+        public static final String SMS_STATUS_INVALID = "INVALID";  // will never be delivered
         
         // Channel and event names (tied to the *.event and *.channel definitions)
         

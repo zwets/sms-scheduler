@@ -95,7 +95,6 @@ RECV">
       </extensionElements>
       <terminateEventDefinition></terminateEventDefinition>
     </endEvent>
-    <sequenceFlow id="toAckRecv" sourceRef="evGwy2" targetRef="recvAckRecv"></sequenceFlow>
     <boundaryEvent id="sendTimeout" attachedToRef="sendTask" cancelActivity="true">
       <extensionElements>
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
@@ -121,7 +120,6 @@ RECV">
         <flowable:eventCorrelationParameter xmlns:flowable="http://flowable.org/bpmn" name="key" type="string" value="${clientKey}"></flowable:eventCorrelationParameter>
       </extensionElements>
     </intermediateCatchEvent>
-    <sequenceFlow id="toEndEnroute" sourceRef="sendTimeout" targetRef="endEnroute"></sequenceFlow>
     <eventBasedGateway id="evGwy1"></eventBasedGateway>
     <sequenceFlow id="toEvGwy1" sourceRef="orGwy1" targetRef="evGwy1"></sequenceFlow>
     <endEvent id="endBlocked" name="BLOCKED">
@@ -130,42 +128,53 @@ RECV">
       </extensionElements>
       <terminateEventDefinition></terminateEventDefinition>
     </endEvent>
-    <sequenceFlow id="toExpired" sourceRef="orGwy1" targetRef="endExpired">
-      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "EXPIRED"}]]></conditionExpression>
-    </sequenceFlow>
     <sequenceFlow id="toRecvCancel" sourceRef="evGwy1" targetRef="recvCancel"></sequenceFlow>
     <sequenceFlow id="toScheduled" sourceRef="evGwy1" targetRef="schedulerTimer"></sequenceFlow>
-    <sequenceFlow id="toCanceled" sourceRef="recvCancel" targetRef="endCanceled">
-      <extensionElements>
-        <flowable:executionListener event="take" expression="${execution.setVariable(&quot;smsStatus&quot;, &quot;CANCELED&quot;)}"></flowable:executionListener>
-      </extensionElements>
-    </sequenceFlow>
     <sequenceFlow id="toSend" sourceRef="schedulerTimer" targetRef="sendTask">
       <extensionElements>
         <flowable:executionListener event="take" expression="${execution.setVariable(&quot;smsStatus&quot;,&quot;ENROUTE&quot;)}"></flowable:executionListener>
       </extensionElements>
     </sequenceFlow>
-    <sequenceFlow id="toSent" sourceRef="timerRecvAck" targetRef="endSent"></sequenceFlow>
-    <sequenceFlow id="fromSend" sourceRef="sendTask" targetRef="orGwy2"></sequenceFlow>
     <sequenceFlow id="fromAck2" sourceRef="recvAckRecv" targetRef="orGwy3"></sequenceFlow>
-    <sequenceFlow id="toDelivered" sourceRef="orGwy3" targetRef="endDelivered">
-      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "DELIVERED"}]]></conditionExpression>
-    </sequenceFlow>
     <sequenceFlow id="retryLoop" sourceRef="orGwy3" targetRef="triageTask">
       <extensionElements>
         <flowable:executionListener event="take" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
-    </sequenceFlow>
-    <sequenceFlow id="toEvGwy2" sourceRef="orGwy2" targetRef="evGwy2">
-      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "SENT"}]]></conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="bypassAck2" sourceRef="orGwy2" targetRef="orGwy3">
       <extensionElements>
         <flowable:executionListener event="take" delegateExpression="${processLogger}"></flowable:executionListener>
       </extensionElements>
     </sequenceFlow>
+    <sequenceFlow id="toDelivered" sourceRef="orGwy3" targetRef="endDelivered">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "DELIVERED"}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toSent" sourceRef="timerRecvAck" targetRef="endSent"></sequenceFlow>
+    <sequenceFlow id="toAckRecv" sourceRef="evGwy2" targetRef="recvAckRecv"></sequenceFlow>
+    <sequenceFlow id="fromSend" sourceRef="sendTask" targetRef="orGwy2"></sequenceFlow>
+    <endEvent id="endInvalid" name="INVALID">
+      <extensionElements>
+        <flowable:executionListener event="start" delegateExpression="${processLogger}"></flowable:executionListener>
+      </extensionElements>
+      <terminateEventDefinition></terminateEventDefinition>
+    </endEvent>
+    <sequenceFlow id="toEvGwy2" sourceRef="orGwy2" targetRef="evGwy2">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "SENT"}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toCanceled" sourceRef="recvCancel" targetRef="endCanceled">
+      <extensionElements>
+        <flowable:executionListener event="take" expression="${execution.setVariable(&quot;smsStatus&quot;, &quot;CANCELED&quot;)}"></flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="toExpired" sourceRef="orGwy1" targetRef="endExpired">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "EXPIRED"}]]></conditionExpression>
+    </sequenceFlow>
     <sequenceFlow id="toBlocked" sourceRef="orGwy1" targetRef="endBlocked">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "BLOCKED"}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toEndEnroute" sourceRef="sendTimeout" targetRef="endEnroute"></sequenceFlow>
+    <sequenceFlow id="toEndInvalid" sourceRef="orGwy2" targetRef="endInvalid">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${smsStatus == "INVALID"}]]></conditionExpression>
     </sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_smsSchedulerProcess">
@@ -227,6 +236,9 @@ RECV">
       <bpmndi:BPMNShape bpmnElement="endBlocked" id="BPMNShape_endBlocked">
         <omgdc:Bounds height="28.0" width="28.0" x="246.0" y="28.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="endInvalid" id="BPMNShape_endInvalid">
+        <omgdc:Bounds height="28.0" width="28.0" x="661.75" y="255.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="toAckRecv" id="BPMNEdge_toAckRecv" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="15.880893300248138" flowable:targetDockerY="15.94905164059255">
         <omgdi:waypoint x="769.9702344403672" y="119.09278093243107"></omgdi:waypoint>
         <omgdi:waypoint x="811.6256473197373" y="119.57693236096699"></omgdi:waypoint>
@@ -259,13 +271,17 @@ RECV">
         <omgdi:waypoint x="204.94999999999794" y="118.2367298578199"></omgdi:waypoint>
         <omgdi:waypoint x="240.40476190476048" y="118.4047619047619"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="toEvGwy2" id="BPMNEdge_toEvGwy2" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="20.759493670886076" flowable:targetDockerY="20.628930817610062">
+        <omgdi:waypoint x="694.8740808198073" y="118.81351335127997"></omgdi:waypoint>
+        <omgdi:waypoint x="731.3110053368799" y="118.93600533688182"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="toEndEnroute" id="BPMNEdge_toEndEnroute" flowable:sourceDockerX="15.999999999999998" flowable:sourceDockerY="16.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
         <omgdi:waypoint x="568.7851141100763" y="174.7422835123498"></omgdi:waypoint>
         <omgdi:waypoint x="568.420992713923" y="255.0001416698363"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="toEvGwy2" id="BPMNEdge_toEvGwy2" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="20.759493670886076" flowable:targetDockerY="20.628930817610062">
-        <omgdi:waypoint x="694.8740808198073" y="118.81351335127997"></omgdi:waypoint>
-        <omgdi:waypoint x="731.3110053368799" y="118.93600533688182"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="toEndInvalid" id="BPMNEdge_toEndInvalid" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="14.254545454545454" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="676.000573269603" y="137.69312534010518"></omgdi:waypoint>
+        <omgdi:waypoint x="676.0041219180155" y="255.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="toEvGwy1" id="BPMNEdge_toEvGwy1" flowable:sourceDockerX="20.5" flowable:sourceDockerY="20.5" flowable:targetDockerX="20.5" flowable:targetDockerY="20.5">
         <omgdi:waypoint x="279.3251503867061" y="118.61770186335403"></omgdi:waypoint>

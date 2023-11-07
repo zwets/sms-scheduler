@@ -2,7 +2,9 @@
 
 _Secure and reliable scheduled delivery of SMS messages_
 
-Very much **WORK IN PROGRESS**
+**WORK IN PROGRESS**
+
+See also the related [SMS Gateway](https://github.com/zwets/sms-gateway).
 
 
 ## Background
@@ -34,36 +36,36 @@ Overview of Mechanism:
  * The SMS Scheduler, not having the private key, has no access to the
    plaintext payload
  * At the scheduled time, SMS Scheduler forwards the payload as-is to the
-   backend SMS Gateway
+   backend [SMS Gateway](https://github.com/zwets/sms-gateway).
  * The backend SMS Gateway decrypts the SMS and transmits to the SMSC;
    it reports delivery notifications from the SMSC back to SMS Scheduler
  * SMS Scheduler may reschedule if it is notified of non-delivery, taking
    into account the SMS delivery schedule
 
-Overview of Implementation
+## Implementation
 
  * The SMS Scheduler is a standalone WAR that can either be deployed on
    Tomcat or run standalone on Java 17+ using its embedded Tomcat server
- * The scheduler consumes requests from Kafka channel 'schedule-sms' and
-   from REST requests; it can be queried over REST.
+ * The scheduler consumes requests from Kafka topic `schedule-sms` or from
+   REST requests; it can be queried over REST.
  * It is built on top of the [Flowable](https://flowable.org) process
    engine using Spring Boot 3.
  * A database (PostgreSQL or other) is required for maintaining process
    state
- * A backend SMS Gateway is required to handle the actual transmission of
-   the SMS to the SMSC; communication is over Kafka topics 'send-sms' and
-   'sms-status'
+ * The backend [SMS Gateway](https://github.com/zwets/sms-gateway) handles
+   the actual transmission of the SMS to the SMSC; communication is over
+   Kafka topics `send-sms` and `sms-status`
 
-
-## Technical Details
-
-@TODO@
 
 ---
 
 ## Development Notes
 
 * [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/docs/3.1.4/maven-plugin/reference/html/)
+* [Flowable Event Registry](https://blog.flowable.org/2020/02/08/introducing-the-flowable-event-registry/) and
+  [Processing Kafka Events in Flowable](https://blog.flowable.org/2020/03/24/flowable-business-processing-from-kafka-events/)
+* If you want to use your own inbound channel, then you can use expression as the type and set adapterDelegateExpression to
+  your own @KafkaListener. Your bean needs to then implement InboundEventChannelAdapter which will get the channel.
 
 ---
 
