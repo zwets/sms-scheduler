@@ -160,7 +160,17 @@ class SchedulerRestControllerTests {
         assertEquals(s.started(), r.started());
         assertEquals(s.retries(), r.retries());
         
-        schedulerService.deleteInstance(id);
+        response = rest.POST("/schedule/test", simpleRequest(10));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        
+        response = rest.GET("/schedule/test");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        List<SmsStatus> ss = deserializeStatusList(response);
+        assertEquals(2, ss.size());
+        
+        for (SmsStatus sm : ss) {
+            schedulerService.deleteInstance(sm.id());
+        }
     }
 
     @Test
@@ -208,9 +218,40 @@ class SchedulerRestControllerTests {
         response = rest.DELETE("/block/test/" + TARGET);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertFalse(targetBlockerService.isTargetBlocked("test", TARGET));
-        
+
+        response = rest.DELETE("/block/test/" + TARGET);
+        assertEquals(HttpStatus.OK, response.getStatusCode(), "deleting twice should be fine");
+
         response = rest.GET("/block/test/" + TARGET);
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+        
+    @Test
+    public void testBlockMultiTarget() {
+        final String TARGET1 = "block-me-1";
+        final String TARGET2 = "block-me-2";
+        
+        ResponseEntity<String> response = rest.PUT("/block/test/" + TARGET1, "");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(targetBlockerService.isTargetBlocked("test", TARGET1));
+        
+        response = rest.PUT("/block/test/" + TARGET2, "");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(targetBlockerService.isTargetBlocked("test", TARGET2));
+
+        response = rest.GET("/block/test");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(2, deserializeBlockList(response).length);
+        
+        response = rest.DELETE("/block/test/" + TARGET1);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        
+        response = rest.DELETE("/block/test/" + TARGET2);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        
+        response = rest.GET("/block/test");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(0, deserializeBlockList(response).length);
     }
         
     @Test
@@ -236,7 +277,6 @@ class SchedulerRestControllerTests {
         schedulerService.deleteInstance(id);
     }
         
-
     @Test
     void testImmediateWithWait() {
 
@@ -342,6 +382,10 @@ class SchedulerRestControllerTests {
         }
         
         return result;
+    }
+
+    private String[] deserializeBlockList(ResponseEntity<String> entity) {
+        return StringUtils.stripAll(entity.getBody().split("\n"));
     }
 
         // Helpers - serialise to JSON
