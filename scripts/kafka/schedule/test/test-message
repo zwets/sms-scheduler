@@ -1,0 +1,20 @@
+#!/bin/bash
+
+USAGE="MESSAGE
+
+  Schedule a test SMS over Kafka, with dummy defaults.
+
+  Refer to ../schedule-sms --help for argument details"
+
+. "$(dirname "$0")/../../lib/common.sh"
+
+[ -n "${1:-}" ] && [ -n "${1%%-*}" ] || usage_exit
+
+NOW=$(date +%s)
+CLIENT="test"
+TARGET=""
+KEY="test-dummy-$$"
+SCHEDULE="$((NOW))-$((NOW+10));$((NOW+20))-$((NOW+30))"
+MESSAGE="$*"
+
+exec "$(dirname "$0")/../schedule-sms" "$CLIENT" "$TARGET" "$KEY" "$SCHEDULE" "$MESSAGE"

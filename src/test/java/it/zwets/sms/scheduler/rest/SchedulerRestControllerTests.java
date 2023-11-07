@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -274,6 +275,10 @@ class SchedulerRestControllerTests {
         assertEquals(Constants.SMS_STATUS_BLOCKED, r.status());
         assertNotNull(r.ended());
     
+        response = rest.DELETE("/block/test/" + TARGET);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertFalse(targetBlockerService.isTargetBlocked("test", TARGET));
+        
         schedulerService.deleteInstance(id);
     }
         
@@ -385,7 +390,7 @@ class SchedulerRestControllerTests {
     }
 
     private String[] deserializeBlockList(ResponseEntity<String> entity) {
-        return StringUtils.stripAll(entity.getBody().split("\n"));
+        return Arrays.stream(entity.getBody().split("\n")).filter(StringUtils::isNotBlank).toArray(String[]::new);
     }
 
         // Helpers - serialise to JSON
