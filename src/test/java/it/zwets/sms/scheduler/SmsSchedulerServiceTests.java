@@ -24,8 +24,8 @@ class SmsSchedulerServiceTests {
     
     private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerServiceTests.class);
 
-    private static String CLIENT = "client";
-    private static String NOT_CLIENT = "not-client";
+    private static String CLIENT = "test";
+    private static String NOT_CLIENT = "not-test";
     
     @Autowired
     private SmsSchedulerService service;
