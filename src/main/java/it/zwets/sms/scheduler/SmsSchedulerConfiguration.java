@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Configuration;
 
 import it.zwets.sms.scheduler.delegate.TriageDelegate;
 import it.zwets.sms.scheduler.diag.ProcessLogger;
-import it.zwets.sms.scheduler.diag.TaskLogger;
 import it.zwets.sms.scheduler.diag.VariableLogger;
 import it.zwets.sms.scheduler.iam.IamService;
 import it.zwets.sms.scheduler.init.SmsSchedulerProcessInitialiser;
@@ -52,12 +51,6 @@ public class SmsSchedulerConfiguration {
     @Value("${sms.scheduler.diag.processes.detailed:false}")
     private boolean diagProcessesDetailed;
     
-    @Value("${sms.scheduler.diag.tasks.enabled:false}")
-    private boolean diagTasksEnabled;
-
-    @Value("${sms.scheduler.diag.tasks.detailed:false}")
-    private boolean diagTasksDetailed;
-
     private final RuntimeService runtimeService;
     private final IdmIdentityService idmIdentityService;
     private final TargetBlockerService targetBlockerService;
@@ -114,11 +107,6 @@ public class SmsSchedulerConfiguration {
     @Bean
     public ProcessLogger processLogger() {
         return new ProcessLogger(new VariableLogger(runtimeService), diagProcessesEnabled, diagProcessesDetailed);
-    }
-
-    @Bean
-    public TaskLogger taskLogger() {
-        return new TaskLogger(new VariableLogger(runtimeService), diagTasksEnabled, diagTasksDetailed);
     }
 
     /**

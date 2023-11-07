@@ -217,12 +217,24 @@ public class SmsSchedulerService {
     
     @Transactional
     public void deleteInstance(String instanceId) {
+        LOG.debug("deleteInstance({})", instanceId);
         if (runtimeService.createProcessInstanceQuery().processInstanceId(instanceId).count() != 0) {
             runtimeService.deleteProcessInstance(instanceId, null);
         }
         historyService.deleteHistoricProcessInstance(instanceId);
     }
-    
+
+    @Transactional
+    public void deleteAllForClient(String clientId) {
+        for (HistoricProcessInstance hpi : historyService.createHistoricProcessInstanceQuery()
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+                .variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .list())
+        {
+            deleteInstance(hpi.getId());
+        }
+    }
+
     // Helpers ------------------------------------------------------------------------------------
 
     private SmsStatus hpiToSmsStatus(HistoricProcessInstance hpi) {

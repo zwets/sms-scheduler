@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Instant;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +25,17 @@ class SmsSchedulerServiceTests {
     private static final Logger LOG = LoggerFactory.getLogger(SmsSchedulerServiceTests.class);
 
     private static String CLIENT = "client";
+    private static String NOT_CLIENT = "not-client";
     
     @Autowired
     private SmsSchedulerService service;
+    
+    @AfterEach
+    void afterEach() {
+        service.deleteAllForClient(CLIENT);
+        service.deleteAllForClient(NOT_CLIENT);
+        assertEquals(0, service.getStatusList().size());
+    }
     
     @Test
     void testNullClientThrows() {
@@ -150,7 +159,7 @@ class SmsSchedulerServiceTests {
         final String KEY = "cancel-key";
         final String NO_KEY = "not-key";
         
-        String id0 = service.scheduleSms("NOT_CLIENT", null, KEY, scheduleIn(5), "testCancelAllForTarget0").id();
+        String id0 = service.scheduleSms(NOT_CLIENT, null, KEY, scheduleIn(5), "testCancelAllForTarget0").id();
         String id1 = service.scheduleSms(CLIENT, null, KEY, scheduleIn(5), "testCancelByClientKey1").id();
         String id2 = service.scheduleSms(CLIENT, null, NO_KEY, scheduleIn(5), "testCancelByClientKey2").id();
         
@@ -159,10 +168,6 @@ class SmsSchedulerServiceTests {
         assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
         assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
         assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
-
-        service.deleteInstance(id0);
-        service.deleteInstance(id1);
-        service.deleteInstance(id2);
     }
 
     @Test
@@ -171,7 +176,7 @@ class SmsSchedulerServiceTests {
         final String TARGET = "cancel-target";
         final String NO_TARGET = "not-target";
         
-        String id0 = service.scheduleSms("NOT_CLIENT", TARGET, null, scheduleIn(5), "testCancelAllForTarget0").id();
+        String id0 = service.scheduleSms(NOT_CLIENT, TARGET, null, scheduleIn(5), "testCancelAllForTarget0").id();
         String id1 = service.scheduleSms(CLIENT, TARGET, null, scheduleIn(5), "testCancelAllForTarget1").id();
         String id2 = service.scheduleSms(CLIENT, NO_TARGET, null, scheduleIn(5), "testCancelAllForTarget2").id();
         
@@ -180,16 +185,12 @@ class SmsSchedulerServiceTests {
         assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
         assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
         assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
-
-        service.deleteInstance(id0);
-        service.deleteInstance(id1);
-        service.deleteInstance(id2);
     }
 
     @Test
     void testCancelAllForClient() {
         
-        String id0 = service.scheduleSms("NOT_CLIENT", null, null, scheduleIn(5), "testCancelAllForClient0").id();
+        String id0 = service.scheduleSms(NOT_CLIENT, null, null, scheduleIn(5), "testCancelAllForClient0").id();
         String id1 = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelAllForClient1").id();
         String id2 = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelAllForClient2").id();
         String id3 = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelAllForClient2").id();
@@ -200,37 +201,25 @@ class SmsSchedulerServiceTests {
         assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
         assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id2).status());
         assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id3).status());
-
-        service.deleteInstance(id0);
-        service.deleteInstance(id1);
-        service.deleteInstance(id2);
-        service.deleteInstance(id3);
     }
 
     @Test
     void testGetStatusList() {
         
-        String id0 = service.scheduleSms("NOT_CLIENT", null, null, scheduleIn(5), "testCancelAllForClient0").id();
-        String id1 = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelAllForClient1").id();
+        service.scheduleSms(NOT_CLIENT, null, null, scheduleIn(5), "testCancelAllForClient0").id();
+        service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelAllForClient1").id();
         assertEquals(2, service.getStatusList().size());
-
-        service.deleteInstance(id0);
-        service.deleteInstance(id1);
     }
 
     @Test
     void testGetStatusListByClient() {
         
-        String id0 = service.scheduleSms("NOT_CLIENT", null, null, scheduleIn(5), "testCancelAllForTarget0").id();
-        String id1 = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelByClientKey1").id();
-        String id2 = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelByClientKey2").id();
+        service.scheduleSms(NOT_CLIENT, null, null, scheduleIn(5), "testCancelAllForTarget0").id();
+        service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelByClientKey1").id();
+        service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelByClientKey2").id();
         
         assertEquals(3, service.getStatusList().size());
         assertEquals(2, service.getStatusList(CLIENT).size());
-
-        service.deleteInstance(id0);
-        service.deleteInstance(id1);
-        service.deleteInstance(id2);
     }
 
     @Test
@@ -239,15 +228,11 @@ class SmsSchedulerServiceTests {
         final String TARGET = "the-target";
         final String NO_TARGET = "not-target";
         
-        String id0 = service.scheduleSms("NOT_CLIENT", TARGET, null, scheduleIn(5), "testCancelAllForTarget0").id();
-        String id1 = service.scheduleSms(CLIENT, TARGET, null, scheduleIn(5), "testCancelAllForTarget1").id();
-        String id2 = service.scheduleSms(CLIENT, NO_TARGET, null, scheduleIn(5), "testCancelAllForTarget2").id();
+        service.scheduleSms(NOT_CLIENT, TARGET, null, scheduleIn(5), "testCancelAllForTarget0").id();
+        service.scheduleSms(CLIENT, TARGET, null, scheduleIn(5), "testCancelAllForTarget1").id();
+        service.scheduleSms(CLIENT, NO_TARGET, null, scheduleIn(5), "testCancelAllForTarget2").id();
         
         assertEquals(1, service.getStatusListByTarget(CLIENT, TARGET).size());
-        
-        service.deleteInstance(id0);
-        service.deleteInstance(id1);
-        service.deleteInstance(id2);
     }
 
     @Test
@@ -256,15 +241,11 @@ class SmsSchedulerServiceTests {
         final String KEY = "cancel-key";
         final String NO_KEY = "not-key";
         
-        String id0 = service.scheduleSms("NOT_CLIENT", null, KEY, scheduleIn(5), "testCancelAllForTarget0").id();
-        String id1 = service.scheduleSms(CLIENT, null, KEY, scheduleIn(5), "testCancelByClientKey1").id();
-        String id2 = service.scheduleSms(CLIENT, null, NO_KEY, scheduleIn(5), "testCancelByClientKey2").id();
+        service.scheduleSms(NOT_CLIENT, null, KEY, scheduleIn(5), "testCancelAllForTarget0").id();
+        service.scheduleSms(CLIENT, null, KEY, scheduleIn(5), "testCancelByClientKey1").id();
+        service.scheduleSms(CLIENT, null, NO_KEY, scheduleIn(5), "testCancelByClientKey2").id();
         
         assertEquals(1, service.getStatusListByClientKey(CLIENT, KEY).size());
-
-        service.deleteInstance(id0);
-        service.deleteInstance(id1);
-        service.deleteInstance(id2);
     }
 
     // Helpers ------------------------------------------------------------------------------------

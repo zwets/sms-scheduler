@@ -5,7 +5,7 @@ set -euo pipefail
 
 # Defaults
 
-export BROKER="${BROKER:-localhost:9092}"
+export BROKER="${BROKER:-localhost:9192}"
 export TOPIC="${TOPIC:-schedule-sms}"
 export PARTITION="${PARTITION:-0}"
 export EVENTKEY="${EVENTKEY:-}"
