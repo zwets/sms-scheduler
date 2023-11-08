@@ -9,7 +9,7 @@ export VERBOSE=${VERBOSE:-}
 export HEADERS=${HEADERS:-}
 export TEXTONLY=${TEXTONLY:-}
 export DUMPINPUT=${DUMPINPUT:-}
-export BASEURL="${BASEURL:-http://localhost:8181}"
+export BASEURL="${BASEURL:-http://localhost:8180}"
 export CONTEXT="${CONTEXT:-}"
 # UP is a convenience for testing with accounts with UNAME==PWORD
 export UNAME="${UNAME:-${UP:-admin}}"
