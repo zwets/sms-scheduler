@@ -10,7 +10,6 @@
   ],
   "payload": [
     { "name": "sms-status", "type": "string" },
-    { "name": "error-code", "type": "integer" },
     { "name": "error-text", "type": "string" }
   ]
 }

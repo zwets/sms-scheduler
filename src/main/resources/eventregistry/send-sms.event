@@ -11,7 +11,7 @@
   "payload": [
     { "name": "correl-id", "type": "string" },
     { "name": "client-id", "type": "string" },
-    { "name": "message", "type": "string" },
-    { "name": "deadline", "type": "string" }
+    { "name": "deadline", "type": "string" },
+    { "name": "payload", "type": "string" }
   ]
 }
