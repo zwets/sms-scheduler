@@ -7,7 +7,9 @@ _Secure and reliable scheduled delivery of SMS messages_
 See also the related [SMS Gateway](https://github.com/zwets/sms-gateway).
 
 
-## Background
+## Architecture Overview
+
+### Requirements
 
 This SMS scheduler was built to fulfil the requirements of health research
 projects with strong privacy and reliability requirements.  In particular:
@@ -19,22 +21,28 @@ projects with strong privacy and reliability requirements.  In particular:
  * Each SMS has its own schedule, a sequence of time slots within which
    delivery will be attempted, until it succeeds or expires.
 
-Additional requirements:
+**Additional requirements**
 
  * Multi-tenancy: multiple independent clients can concurrently use the
    system
- * Reporting: clients can query for the status of scheduled SMSes
+ * Reporting: clients can query the status of scheduled SMSes
+ * Cancellation: a client can request cancellation of a scheduled SMS, of
+   all SMS for a specific target, or all its scheduled SMS
+ * Blocking: a client can request that all future requests to a specific
+   target ID will be ignored
+ * API: all functionality of the scheduler is exposed to clients over REST;
+   one-way requests (schedule, cancel, block) can also be sent over Kafka
 
-Overview of Mechanism:
+### Overview of Mechanism
 
  * Client encrypts the SMS payload, which includes both destination number
    and message content, with the public key of the backend SMS gateway
- * Client hands payload with delivery schedule to SMS Scheduler, as well as
-   two optional keys to later refer to the (group of) SMS:
-   * Target ID, a "moniker" for the destination / receiver of the SMS
+ * Client hands payload with delivery schedule to SMS Scheduler, as well
+   as two optional keys to later refer to the (group of) SMS:
+   * Target ID, a "moniker" for the destination/receiver of the SMS
    * Instance ID, to reference this specific SMS send
  * The SMS Scheduler, not having the private key, has no access to the
-   plaintext payload
+   plaintext payload, it only knows about the schedule
  * At the scheduled time, SMS Scheduler forwards the payload as-is to the
    backend [SMS Gateway](https://github.com/zwets/sms-gateway).
  * The backend SMS Gateway decrypts the SMS and transmits to the SMSC;
@@ -42,7 +50,7 @@ Overview of Mechanism:
  * SMS Scheduler may reschedule if it is notified of non-delivery, taking
    into account the SMS delivery schedule
 
-## Implementation
+### Overview of Infrastructure
 
  * The SMS Scheduler is a standalone WAR that can either be deployed on
    Tomcat or run standalone on Java 17+ using its embedded Tomcat server
@@ -50,22 +58,18 @@ Overview of Mechanism:
    REST requests; it can be queried over REST.
  * It is built on top of the [Flowable](https://flowable.org) process
    engine using Spring Boot 3.
- * A database (PostgreSQL or other) is required for maintaining process
-   state
+ * A database (PostgreSQL or other) maintains process state
  * The backend [SMS Gateway](https://github.com/zwets/sms-gateway) handles
-   the actual transmission of the SMS to the SMSC; communication is over
-   Kafka topics `send-sms` and `sms-status`
+   the actual transmission of the SMS to the SMSC
+   * Requests to the Gateway go out (fire-forget) on Kafka topic `send-sms`
+   * Gateway sends asynchronous notifications (delivery, failure) in on
+     Kafka topic `sms-status`
 
 
----
+## Technical Documentation
 
-## Development Notes
+See the [docs](docs) directory.
 
-* [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/docs/3.1.4/maven-plugin/reference/html/)
-* [Flowable Event Registry](https://blog.flowable.org/2020/02/08/introducing-the-flowable-event-registry/) and
-  [Processing Kafka Events in Flowable](https://blog.flowable.org/2020/03/24/flowable-business-processing-from-kafka-events/)
-* If you want to use your own inbound channel, then you can use expression as the type and set adapterDelegateExpression to
-  your own @KafkaListener. Your bean needs to then implement InboundEventChannelAdapter which will get the channel.
 
 ---
 
