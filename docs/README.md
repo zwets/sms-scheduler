@@ -5,12 +5,22 @@ For an overview of the SMS Scheduler, see the top-level [README](../README.md).
 
 ## Development
 
-@TODO@ describe setting up dev environment  
-@TODO@ include diagram for scheduler and blocker processes 
+@TODO@ describe setting up dev environment (including BPMN editor)
+@TODO@ include diagrams for scheduler and blocker processes 
 
 #### Configuration
 
 @TODO@
+
+#### Building
+
+@TODO@
+
+#### Testing
+
+@TODO@
+
+#### Deploying
 
 
 ## Interfacing
