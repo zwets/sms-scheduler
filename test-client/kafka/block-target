@@ -1,0 +1,24 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+. "$(dirname "$(realpath "$0")")/lib/defaults.sh"
+
+USAGE="[CLIENT] TARGET
+
+  Block a target from receiving further SMS
+
+  POSITIONAL PARAMS
+   CLIENT    Client ID [$CLIENT]
+   TARGET    Target ID assigned by client"
+
+. "$(dirname "$(realpath "$0")")/lib/common.sh"
+
+(($# == 1)) || (($# == 2)) || usage_exit
+
+(($# == 2)) && CLIENT="$1" && shift || true
+(($# == 1)) && TARGET="$1" && shift || true
+
+printf '{ "action": "block", "client": "%s", "target": "%s" }\n' "$CLIENT" "$TARGET" |
+kcat_send

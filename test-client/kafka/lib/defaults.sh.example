@@ -1,0 +1,23 @@
+# Copy this file to 'defaults.sh' and set the defaults to your liking.
+# These are used as fallbacks for options that are omitted in the scripts.
+
+DEFAULT_BROKER='localhost:9092'
+DEFAULT_TOPIC='schedule-sms'
+DEFAULT_CLIENT='test'
+DEFAULT_SCHEDULE='+0'
+DEFAULT_SENDER='TEST SENDER'
+DEFAULT_RECIPIENT='255123456789'
+
+# If send-sms can't find sms-client, set it here
+#SMS_CLIENT=/path/to/sms-client/bin/sms-client
+
+# --- NO EDITING BELOW THIS LINE ---
+
+BROKER="${BROKER:-$DEFAULT_BROKER}"
+TOPIC="${TOPIC:-$DEFAULT_TOPIC}"
+CLIENT="${CLIENT:-$DEFAULT_CLIENT}"
+SCHEDULE="${SCHEDULE:-$DEFAULT_SCHEDULE}"
+SENDER="${SENDER:-$DEFAULT_SENDER}"
+RECIPIENT="${RECIPIENT:-$DEFAULT_RECIPIENT}"
+KEY="${KEY:-${CLIENT}-${RANDOM}$$}"
+PUBFILE="${PUBFILE:-$(dirname "$(realpath "$0")")/lib/${CLIENT}.pub}"

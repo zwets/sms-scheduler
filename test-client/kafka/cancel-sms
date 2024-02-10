@@ -1,0 +1,24 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+. "$(dirname "$(realpath "$0")")/lib/defaults.sh"
+
+USAGE="[CLIENT] KEY
+
+  Cancel a scheduled SMS
+
+  POSITIONAL PARAMS
+   CLIENT    Client ID [$CLIENT]
+   KEY       Identifier assigned by client"
+
+. "$(dirname "$0")/lib/common.sh"
+
+(($# == 1)) || (($# == 2)) || usage_exit
+
+(($# == 2)) && CLIENT="$1" && shift || true
+(($# == 1)) && KEY="$1"    && shift || true
+
+printf '{ "action": "cancel", "client": "%s", "key": "%s" }\n' "$CLIENT" "$KEY" |
+kcat_send

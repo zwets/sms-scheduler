@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+#  Command-line test client for sms-scheduler that writes to Kafka topic.
+
+export LC_ALL="C"
+set -euo pipefail
+
+# Source the defaults, see lib/defaults.sh.example
+. "$(dirname "$(realpath "$0")")/lib/defaults.sh"
+
+# The functions in common.sh will display this
+USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] KEY] SCHEDULE] SENDER] RECIPIENT] FILE]
+  Schedule an SMS through a Kafka event
+
+  POSITIONAL PARAMS
+   PUBFILE    Public key file to encrypt with [lib/\${CLIENT}.pub]
+   CLIENT     Client on whose behalf you are sending [$CLIENT]
+   TARGET     Client identifier for the recipient [encrock(\$RECIPIENT)]
+   KEY        Client identifier for this specific send [\${CLIENT}-\${RANDOM}]
+   SCHEDULE   Sending schedule (see below) [+0]
+   SENDER     Sender name or number [$SENDER]
+   RECIPIENT  Destination number [$RECIPIENT]
+   FILE       File with message body or '-' for stdin [-]
+
+  SCHEDULE format is either
+    SEC-SEC(;SEC-SEC)* where SEC is epoch seconds (date +%s)
+    ISO/ISO(;ISO/ISO)* where ISO is zoned datetime (date -Is)
+    +SEC1[+SEC2] between SEC1 and SEC2 (default 600) after now"
+
+. "$(dirname "$(realpath "$0")")/lib/common.sh"
+
+# Parse the optional arguments
+(( $# == 8 )) && PUBKEY="$1"    && shift || true
+(( $# == 7 )) && CLIENT="$1"    && shift || true
+(( $# == 6 )) && TARGET="$1"    && shift || true
+(( $# == 5 )) && KEY="$1"       && shift || true
+(( $# == 4 )) && SCHEDULE="$1"  && shift || true
+(( $# == 3 )) && SENDER="$1"    && shift || true
+(( $# == 2 )) && RECIPIENT="$1" && shift || true
+(( $# == 1 )) && FILE="$1"      && shift || FILE='-'
+
+# Rewrite the SCHEDULE +SEC1[+SEC2] convenience to real input
+[ "${SCHEDULE#+}" = "${SCHEDULE}" ] || SCHEDULE="$(rewrite_schedule "$SCHEDULE")"
+
+# If TARGET is not set, make it the encrocked recipient
+[ -n "${TARGET:-}" ] || TARGET="$(encrock_phone "${RECIPIENT: -9}")"
+
+# Read the PUBKEY from PUBFILE
+PUBKEY="$(cat "$PUBFILE")" || err_exit "failed to read pubkey file: $PUBFILE"
+
+# Produce the encrypted payload for CLIENT
+PAYLOAD="$({ printf 'To: %s\nSender: %s\n\n' "$RECIPIENT" "$SENDER"; cat "$FILE"; } | pubkey_encrypt "$PUBKEY")"
+
+# Dump the standard diags
+dump_diags
+emit "CLIENT    = $CLIENT"
+emit "TARGET    = $TARGET"
+emit "KEY       = $KEY"
+emit "SCHEDULE  = $SCHEDULE"
+emit "SENDER    = $SENDER"
+emit "RECIPIENT = $RECIPIENT"
+
+# Produce the message and pipe it onto the topic
+printf '{ "action": "schedule", "client": "%s", "target": "%s", "key": "%s", "schedule": "%s", "message": "%s" }\n' \
+        "$CLIENT" "$TARGET" "$KEY" "$SCHEDULE" "$PAYLOAD" |
+kcat_send
