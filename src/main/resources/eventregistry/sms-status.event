@@ -5,11 +5,13 @@
     "smsStatusChannel"
   ],
   "correlationParameters": [
-    { "name": "correl-id", "type": "string" },
-    { "name": "client-id", "type": "string" }
+    { "name": "client-id", "type": "string" },
+    { "name": "correl-id", "type": "string" }
   ],
   "payload": [
+    { "name": "timestamp", "type": "string" },
     { "name": "sms-status", "type": "string" },
+    { "name": "recall-id", "type": "string" },
     { "name": "error-text", "type": "string" }
   ]
 }
