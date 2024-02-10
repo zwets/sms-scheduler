@@ -9,14 +9,15 @@ set -euo pipefail
 . "$(dirname "$(realpath "$0")")/lib/defaults.sh"
 
 # The functions in common.sh will display this
-USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] KEY] SCHEDULE] SENDER] RECIPIENT] FILE]
+USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FILE]
+
   Schedule an SMS through a Kafka event
 
   POSITIONAL PARAMS
    PUBFILE    Public key file to encrypt with [lib/\${CLIENT}.pub]
    CLIENT     Client on whose behalf you are sending [$CLIENT]
    TARGET     Client identifier for the recipient [encrock(\$RECIPIENT)]
-   KEY        Client identifier for this specific send [\${CLIENT}-\${RANDOM}]
+   BIZKEY     Client identifier for this specific send [\${CLIENT}-\${RANDOM}]
    SCHEDULE   Sending schedule (see below) [+0]
    SENDER     Sender name or number [$SENDER]
    RECIPIENT  Destination number [$RECIPIENT]
@@ -33,7 +34,7 @@ USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] KEY] SCHEDULE] SENDER] RECIPIENT] FILE]
 (( $# == 8 )) && PUBKEY="$1"    && shift || true
 (( $# == 7 )) && CLIENT="$1"    && shift || true
 (( $# == 6 )) && TARGET="$1"    && shift || true
-(( $# == 5 )) && KEY="$1"       && shift || true
+(( $# == 5 )) && BIZKEY="$1"    && shift || true
 (( $# == 4 )) && SCHEDULE="$1"  && shift || true
 (( $# == 3 )) && SENDER="$1"    && shift || true
 (( $# == 2 )) && RECIPIENT="$1" && shift || true
@@ -55,12 +56,12 @@ PAYLOAD="$({ printf 'To: %s\nSender: %s\n\n' "$RECIPIENT" "$SENDER"; cat "$FILE"
 dump_diags
 emit "CLIENT    = $CLIENT"
 emit "TARGET    = $TARGET"
-emit "KEY       = $KEY"
+emit "BIZKEY    = $BIZKEY"
 emit "SCHEDULE  = $SCHEDULE"
 emit "SENDER    = $SENDER"
 emit "RECIPIENT = $RECIPIENT"
 
 # Produce the message and pipe it onto the topic
 printf '{ "action": "schedule", "client": "%s", "target": "%s", "key": "%s", "schedule": "%s", "message": "%s" }\n' \
-        "$CLIENT" "$TARGET" "$KEY" "$SCHEDULE" "$PAYLOAD" |
+        "$CLIENT" "$TARGET" "$BIZKEY" "$SCHEDULE" "$PAYLOAD" |
 kcat_send

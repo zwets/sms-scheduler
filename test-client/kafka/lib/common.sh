@@ -5,7 +5,7 @@ set -euo pipefail
 
 export BROKER="${BROKER:-${DEFAULT_BROKER:-localhost:9192}}"
 export TOPIC="${TOPIC:-${DEFAULT_TOPIC:-schedule-sms}}"
-export PARTITION="${PARTITION:-}"
+export PART="${PART:-}"
 export EVENTKEY="${EVENTKEY:-}"
 export GROUPID="${GROUPID:-}"
 export OFFSET="${OFFSET:-}"
@@ -17,30 +17,30 @@ export NOT_REALLY=${NOT_REALLY:-}
 export USAGE="${USAGE:-}
 
   COMMON OPTIONS
-   -b,--broker=BROKER  Set the broker host:port [$BROKER]
-   -t,--topic=TOPIC    Set the topic [$TOPIC]
-   -p,--partition=PARTITION  Set the partition [$PARTITION]
-   -k,--key=EVENTKEY   Set the event key [$EVENTKEY]
-   -g,--group=GROUPID  Group ID of client [$GROUPID]
-   -o,--offset=OFFSET  Start reading at offset [$OFFSET]
-   -a,--all            Read the topic from the beginning
-   -d,--dump           Write input to stderr / full output
-   -r,--raw            Do not filter output through JQ
-   -n,--dry-run        Do everything except the real thing
-   -v,--verbose        Display diagnostic output
-   -h,--help           Display usage information
+   -b,--broker=BROKER   Set the broker host:port [$BROKER]
+   -t,--topic=TOPIC     Set the topic [$TOPIC]
+   -p,--partition=PART  Set the partition [$PART]
+   -k,--key=EVENTKEY    Set the event key [$EVENTKEY]
+   -g,--group=GROUPID   Group ID of client [$GROUPID]
+   -o,--offset=OFFSET   Start reading at offset [$OFFSET]
+   -a,--all             Read the topic from the beginning
+   -d,--dump            Write input to stderr / full output
+   -r,--raw             Do not filter output through JQ
+   -n,--dry-run         Do everything except the real thing
+   -v,--verbose         Display diagnostic output
+   -h,--help            Display usage information
 
   All CAPITALISED options can also be passed as environment vars
 "
 # General functions
 
 emit() { [ ! $VERBOSE ] || echo "${0##*/}: $*" >&2; }
-usage_exit() { echo "Usage: ${0##*/} [-adrnvh] [-b BROKER ] [-t TOPIC] [-p PARTITION] [-k KEY] [-g GROUP] [-o OFFSET] ${USAGE}" >&2; exit ${1:-1}; }
+usage_exit() { echo "Usage: ${0##*/} [-adrnvh] [-b BROKER ] [-t TOPIC] [-p PART] [-k EVENTKEY] [-g GROUP] [-o OFFSET] ${USAGE}" >&2; exit ${1:-1}; }
 err_exit() { echo "${0##*/}: $*" >&2; exit 1; }
 
 # Check common options
 
-TEMP=$(getopt -n "${0##*/}" -o 'hvdarnb:t:p:k:g:o:' -l 'help,verbose,dump,all,raw,dry-run,broker,topic,partition,key,group,offset' -- "$@" || exit 1)
+TEMP=$(getopt -n "${0##*/}" -o 'hvdarnb:t:p:k:g:o:' -l 'help,verbose,dump,all,raw,dry-run,broker,topic,partition,eventkey,group,offset' -- "$@" || exit 1)
 eval set -- "$TEMP"
 unset TEMP
 
@@ -50,10 +50,10 @@ while true; do
     case "$1" in
         -b|--b*)    BROKER="$2";          shift 2 ;;
         -t|--t*)    TOPIC="$2";           shift 2 ;;
-        -p|--p*)    PARTITION="$2";       shift 2 ;;
+        -p|--p*)    PART="$2";            shift 2 ;;
         -g|--g*)    GROUPID="$2";         shift 2 ;;
         -o|--o*)    OFFSET="$2";          shift 2 ;;
-        -k|--k*)    EVENTKEY="$2";        shift 2 ;;
+        -k|--e*)    EVENTKEY="$2";        shift 2 ;;
         -a|--a*)    OFFSET='beginning';   shift ;;
         -v|--v*)    VERBOSE=1;            shift ;;
         -d|--du*)   DUMP=1;               shift ;;
@@ -71,7 +71,7 @@ dump_diags() {
     emit "BROKER    = $BROKER"
     emit "TOPIC     = $TOPIC"
     [ -z "$GROUPID" ]   || emit "GROUP     = $GROUPID"
-    [ -z "$PARTITION" ] || emit "PARTITION = $PARTITION"
+    [ -z "$PART" ]      || emit "PART      = $PART"
     [ -z "$OFFSET" ]    || emit "OFFSET    = $OFFSET"
     [ -z "$EVENTKEY" ]  || emit "EVENTKEY  = $EVENTKEY"
 }
@@ -126,12 +126,13 @@ format_out() {
 kcat_send() {
     F="${1:--}" && [ "$F" = '-' ] || [ -f "$F" ] || err_exit "no such file: $F"
     dump_input "$F" | tr '\n' ' ' | if [ $NOT_REALLY ]; then cat >/dev/null; else
-        "$KCAT" -P -b "$BROKER" -t "$TOPIC" ${PARTITION:+-p $PARTITION} ${GROUPID:+-G $GROUPID} ${EVENTKEY:+-k} $EVENTKEY -c 1 ${VERBOSE:+-v} "$@"
+        "$KCAT" -P -b "$BROKER" -t "$TOPIC" ${PART:+-p $PART} ${GROUPID:+-G $GROUPID} ${EVENTKEY:+-k} $EVENTKEY -c 1 ${VERBOSE:+-v} "$@"
     fi
 }
 
 kcat_listen() {
-    "$KCAT" -C -u -b "$BROKER" -t "$TOPIC" ${PARTITION:+-p $PARTITION} ${GROUPID:+-G $GROUPID} ${DUMP:+-J} ${VERBOSE:+-v} ${OFFSET:+ -o $OFFSET} "$@" | format_out
+    [ $NOT_REALLY ] && emit "not going to listen (dry run)" && exit 0 || true
+    "$KCAT" -C -u -b "$BROKER" -t "$TOPIC" ${PART:+-p $PART} ${GROUPID:+-G $GROUPID} ${DUMP:+-J} ${VERBOSE:+-v} ${OFFSET:+ -o $OFFSET} "$@" | format_out
 }
 
 # vim: sts=4:sw=4:ai:si:et
