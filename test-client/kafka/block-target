@@ -3,7 +3,7 @@
 export LC_ALL="C"
 set -euo pipefail
 
-. "$(dirname "$(realpath "$0")")/lib/defaults.sh"
+. "$(dirname "$(realpath "$0")")/lib/defaults"
 
 USAGE="[CLIENT] TARGET
 
@@ -13,7 +13,7 @@ USAGE="[CLIENT] TARGET
    CLIENT    Client ID [$CLIENT]
    TARGET    Target ID assigned by client"
 
-. "$(dirname "$(realpath "$0")")/lib/common.sh"
+. "$(dirname "$(realpath "$0")")/lib/kafka-lib.sh"
 
 (($# == 1)) || (($# == 2)) || usage_exit
 

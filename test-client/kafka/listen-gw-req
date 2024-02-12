@@ -3,7 +3,7 @@
 export LC_ALL="C"
 set -euo pipefail
 
-TOPIC='schedule-sms'
+TOPIC='send-sms'
 
 . "$(dirname "$(realpath "$0")")/lib/defaults"
 

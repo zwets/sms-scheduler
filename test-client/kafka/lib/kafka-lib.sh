@@ -3,12 +3,12 @@
 export LC_ALL="C"
 set -euo pipefail
 
-export BROKER="${BROKER:-${DEFAULT_BROKER:-localhost:9192}}"
-export TOPIC="${TOPIC:-${DEFAULT_TOPIC:-schedule-sms}}"
-export PART="${PART:-}"
-export EVENTKEY="${EVENTKEY:-}"
+export BROKER="${BROKER:-}"
+export TOPIC="${TOPIC:-}"
 export GROUPID="${GROUPID:-}"
+export PART="${PART:-}"
 export OFFSET="${OFFSET:-}"
+export KAFKAKEY="${KAFKAKEY:-}"
 export DUMP=${DUMP:-}
 export RAWOUT=${RAWOUT:-}
 export VERBOSE=${VERBOSE:-}
@@ -19,10 +19,10 @@ export USAGE="${USAGE:-}
   COMMON OPTIONS
    -b,--broker=BROKER   Set the broker host:port [$BROKER]
    -t,--topic=TOPIC     Set the topic [$TOPIC]
-   -p,--partition=PART  Set the partition [$PART]
-   -k,--key=EVENTKEY    Set the event key [$EVENTKEY]
    -g,--group=GROUPID   Group ID of client [$GROUPID]
+   -p,--partition=PART  Set the partition [$PART]
    -o,--offset=OFFSET   Start reading at offset [$OFFSET]
+   -k,--key=KAFKAKEY    Set the kafka event key [$KAFKAKEY]
    -a,--all             Read the topic from the beginning
    -d,--dump            Write input to stderr / full output
    -r,--raw             Do not filter output through JQ
@@ -35,12 +35,12 @@ export USAGE="${USAGE:-}
 # General functions
 
 emit() { [ ! $VERBOSE ] || echo "${0##*/}: $*" >&2; }
-usage_exit() { echo "Usage: ${0##*/} [-adrnvh] [-b BROKER ] [-t TOPIC] [-p PART] [-k EVENTKEY] [-g GROUP] [-o OFFSET] ${USAGE}" >&2; exit ${1:-1}; }
+usage_exit() { echo "Usage: ${0##*/} [-adrnvh] [-b BROKER ] [-t TOPIC] [-g GROUPID] [-p PART] [-o OFFSET] [-k KAFKAKEY] ${USAGE}" >&2; exit ${1:-1}; }
 err_exit() { echo "${0##*/}: $*" >&2; exit 1; }
 
 # Check common options
 
-TEMP=$(getopt -n "${0##*/}" -o 'hvdarnb:t:p:k:g:o:' -l 'help,verbose,dump,all,raw,dry-run,broker,topic,partition,eventkey,group,offset' -- "$@" || exit 1)
+TEMP=$(getopt -n "${0##*/}" -o 'hvdarnb:t:g:p:o:k:' -l 'help,verbose,dump,all,raw,dry-run,broker,topic,group,partition,offset,key' -- "$@" || exit 1)
 eval set -- "$TEMP"
 unset TEMP
 
@@ -50,22 +50,32 @@ while true; do
     case "$1" in
         -b|--b*)    BROKER="$2";          shift 2 ;;
         -t|--t*)    TOPIC="$2";           shift 2 ;;
-        -p|--p*)    PART="$2";            shift 2 ;;
         -g|--g*)    GROUPID="$2";         shift 2 ;;
+        -p|--p*)    PART="$2";            shift 2 ;;
         -o|--o*)    OFFSET="$2";          shift 2 ;;
-        -k|--e*)    EVENTKEY="$2";        shift 2 ;;
         -a|--a*)    OFFSET='beginning';   shift ;;
-        -v|--v*)    VERBOSE=1;            shift ;;
+        -k|--k*)    KAFKAKEY="$2";        shift 2 ;;
         -d|--du*)   DUMP=1;               shift ;;
         -r|--r*)    RAWOUT=1;             shift ;;
         -n|--dr*)   NOT_REALLY=1; DUMP=1; shift ;;
+        -v|--v*)    VERBOSE=1;            shift ;;
         -h|--h*)    usage_exit 0  ;;
         --) shift; break ;;
         *)  err_exit "lpt1 on fire!" ;;
     esac
 done
 
-# Diagnostic output
+# Check required params
+
+[ $NOT_REALLY ] || [ -n "$BROKER" ] || err_exit "BROKER must be specified; set DEFAULT_BROKER in lib/defaults.sh"
+[ $NOT_REALLY ] || [ -n "$TOPIC" ] || err_exit "TOPIC must be specified; set DEFAULT_TOPIC in lib/defaults.sh"
+
+# Resolve necessary tools
+
+KCAT="$(which kcat 2>/dev/null)" || KCAT="$(which kafkacat 2>/dev/null)" || err_exit "command not found: kcat or kafkacat (do: apt install)"
+JQ="$(which jq 2>/dev/null)" || err_exit "command not found: jq (do: apt install jq)"
+
+# Input and output filters
 
 dump_diags() {
     emit "BROKER    = $BROKER"
@@ -73,45 +83,8 @@ dump_diags() {
     [ -z "$GROUPID" ]   || emit "GROUP     = $GROUPID"
     [ -z "$PART" ]      || emit "PART      = $PART"
     [ -z "$OFFSET" ]    || emit "OFFSET    = $OFFSET"
-    [ -z "$EVENTKEY" ]  || emit "EVENTKEY  = $EVENTKEY"
+    [ -z "$KAFKAKEY" ]  || emit "KAFKAKEY  = $KAFKAKEY"
 }
-
-# Look for necessary functions
-
-KCAT="$(which kcat 2>/dev/null)" || KCAT="$(which kafkacat 2>/dev/null)" || err_exit "command not found: kcat or kafkacat (do: apt install kcat || apt install kafkacat)"
-JQ="$(which jq 2>/dev/null)" || err_exit "command not found: jq (do: apt install jq)"
-
-# Functions to generate defaults
-
-sms_client() {
-    [ -n "${SMS_CLIENT:-}" ] ||
-    declare -g SMS_CLIENT="$(realpath -e "$(dirname "$(realpath "$0")")/../../../sms-client/bin/sms-client" 2>/dev/null)" ||
-    declare -g SMS_CLIENT="$(realpath -e "/opt/sms-client/bin/sms-client")" ||
-        err_exit "sms-client not found; set its path in lib/defaults.sh"
-    "$SMS_CLIENT" "$@"
-}
-
-encrock_phone() {
-    emit "encrock phone number: $1"
-    sms_client encrock "$1"
-}
-
-pubkey_encrypt() {
-    emit "encrypt payload"
-    sms_client encrypt "$1"
-}
-
-rewrite_schedule() {  # rewrite the +SEC1[+SEC2] to proper schedule
-    [ "${1#+}" == "${1:-}" ] && return || true
-    emit "rewrite schedule: $1"
-    declare line="${1#+}" 
-    declare t1="${line%+*}"
-    declare -i now=$(date +%s)
-    [ "$line" = "$t1" ] && declare -i s1=${t1:-0} s2=600 || declare -i s1=${t1:-0} s2=${line#*+}
-    echo $(date -Is --date=@$((now + s1)))/$(date -Is --date=@$((now + s1 + s2)))
-}
-
-# Input and output filters
 
 dump_input() {
     [ $DUMP ] && "$JQ" . "$@" | tee /dev/stderr || cat "$@"
@@ -126,7 +99,7 @@ format_out() {
 kcat_send() {
     F="${1:--}" && [ "$F" = '-' ] || [ -f "$F" ] || err_exit "no such file: $F"
     dump_input "$F" | tr '\n' ' ' | if [ $NOT_REALLY ]; then cat >/dev/null; else
-        "$KCAT" -P -b "$BROKER" -t "$TOPIC" ${PART:+-p $PART} ${GROUPID:+-G $GROUPID} ${EVENTKEY:+-k} $EVENTKEY -c 1 ${VERBOSE:+-v} "$@"
+        "$KCAT" -P -b "$BROKER" -t "$TOPIC" ${PART:+-p $PART} ${GROUPID:+-G $GROUPID} ${KAFKAKEY:+-k} $KAFKAKEY -c 1 ${VERBOSE:+-v} "$@"
     fi
 }
 

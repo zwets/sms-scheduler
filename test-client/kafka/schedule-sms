@@ -6,9 +6,9 @@ export LC_ALL="C"
 set -euo pipefail
 
 # Source the defaults, see lib/defaults.sh.example
-. "$(dirname "$(realpath "$0")")/lib/defaults.sh"
+. "$(dirname "$(realpath "$0")")/lib/defaults"
 
-# The functions in common.sh will display this
+# The functions in kafka-lib.sh will display this
 USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FILE]
 
   Schedule an SMS through a Kafka event
@@ -28,7 +28,9 @@ USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FIL
     ISO/ISO(;ISO/ISO)* where ISO is zoned datetime (date -Is)
     +SEC1[+SEC2] between SEC1 and SEC2 (default 600) after now"
 
-. "$(dirname "$(realpath "$0")")/lib/common.sh"
+. "$(dirname "$(realpath "$0")")/lib/kafka-lib.sh"
+. "$(dirname "$(realpath "$0")")/lib/crypto-lib.sh"
+. "$(dirname "$(realpath "$0")")/lib/schedule-lib.sh"
 
 # Parse the optional arguments
 (( $# == 8 )) && PUBKEY="$1"    && shift || true
@@ -50,10 +52,11 @@ USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FIL
 PUBKEY="$(cat "$PUBFILE")" || err_exit "failed to read pubkey file: $PUBFILE"
 
 # Produce the encrypted payload for CLIENT
-PAYLOAD="$({ printf 'To: %s\nSender: %s\n\n' "$RECIPIENT" "$SENDER"; cat "$FILE"; } | pubkey_encrypt "$PUBKEY")"
+PAYLOAD="$(encrypted_sms "$PUBKEY" "$RECIPIENT" "$SENDER" "$FILE")" || err_exit "failed to produce encrypted SMS"
 
 # Dump the standard diags
 dump_diags
+emit "PUBFILE   = $PUBFILE"
 emit "CLIENT    = $CLIENT"
 emit "TARGET    = $TARGET"
 emit "BIZKEY    = $BIZKEY"

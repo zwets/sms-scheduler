@@ -3,13 +3,13 @@
 export LC_ALL="C"
 set -euo pipefail
 
-TOPIC='schedule-sms'
+TOPIC='sms-status'
 
 . "$(dirname "$(realpath "$0")")/lib/defaults"
 
 USAGE="
 
-  Listen on the request topic ($TOPIC)"
+  Listen on the response topic ($TOPIC)"
 
 . "$(dirname "$(realpath "$0")")/lib/kafka-lib.sh"
 
