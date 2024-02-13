@@ -10,7 +10,7 @@
    </parent>
    <groupId>it.zwets</groupId>
    <artifactId>sms-scheduler</artifactId>
-   <version>0.9.7</version>
+   <version>0.9.8-SNAPSHOT</version>
    <packaging>war</packaging>
    <name>SMS Scheduler</name>
    <description>Secure SMS Scheduler based on Flowable</description>
@@ -35,18 +35,18 @@
          <version>${flowable.version}</version>
       </dependency>
       <dependency>
+         <groupId>org.springframework.kafka</groupId>
+         <artifactId>spring-kafka</artifactId>
+      </dependency>
+      <dependency>
          <groupId>com.h2database</groupId>
          <artifactId>h2</artifactId>
          <scope>runtime</scope>
       </dependency>
-      <!-- dependency>
+      <dependency>
          <groupId>org.postgresql</groupId>
          <artifactId>postgresql</artifactId>
          <scope>runtime</scope>
-      </dependency -->
-      <dependency>
-         <groupId>org.springframework.kafka</groupId>
-         <artifactId>spring-kafka</artifactId>
       </dependency>
       <dependency>
          <groupId>org.springframework.boot</groupId>
@@ -60,19 +60,9 @@
       </dependency>
       <dependency>
          <groupId>org.springframework.boot</groupId>
-         <artifactId>spring-boot-starter-tomcat</artifactId>
-         <scope>provided</scope>
-      </dependency>
-      <dependency>
-         <groupId>org.springframework.boot</groupId>
          <artifactId>spring-boot-starter-test</artifactId>
          <scope>test</scope>
       </dependency>
-      <!-- dependency>
-         <groupId>org.springframework.security</groupId>
-         <artifactId>spring-security-test</artifactId>
-         <scope>test</scope>
-      </dependency -->
    </dependencies>
    <build>
       <plugins>

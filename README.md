@@ -2,8 +2,6 @@
 
 _Secure and reliable scheduled delivery of SMS messages_
 
-**WORK IN PROGRESS**
-
 See also the related [SMS Gateway](https://github.com/zwets/sms-gateway).
 
 
@@ -73,7 +71,7 @@ See the [docs](docs) directory.
 
 ---
 
-#### License
+#### Licence
 
 sms-scheduler - Secure and reliable scheduled delivery of SMS messages  
 Copyright (C) 2023  Marco van Zwetselaar <io@zwets.it>
