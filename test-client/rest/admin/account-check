@@ -1,12 +1,17 @@
 #!/bin/bash
 
-# works on /iam and /iam/ and /iam/check
-CONTEXT=/iam
-TEXTONLY=1
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
+
+RAWOUT=1
 USAGE="
 
   Check status of the logged-in account"
 
-. $(realpath $(dirname "$0")/../lib/common.sh)
+. "$LIB_DIR/rest-lib.sh"
 
-rest_GET
+# works on /iam and /iam/ and /iam/check
+rest_GET /iam

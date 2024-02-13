@@ -1,10 +1,15 @@
 #!/bin/bash
 
-CONTEXT=/iam/clients
-USAGE="[ID]
+export LC_ALL="C"
+set -euo pipefail
 
-  Lists all clients or all accounts in client ID"
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
 
-. $(realpath $(dirname "$0")/../lib/common.sh)
+USAGE="[CID]
 
-rest_GET ${1:+/$1}
+  Show client CID and its members or by default all clients."
+
+. "$LIB_DIR/rest-lib.sh"
+
+rest_GET /iam/clients${1:+/$1}

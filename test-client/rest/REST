@@ -1,4 +1,6 @@
 #!/bin/bash
+#
+# Convenience script to call any REST method on any URL
 
 export LC_ALL="C"
 set -euo pipefail

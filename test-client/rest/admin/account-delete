@@ -1,14 +1,19 @@
 #!/bin/bash
 
-CONTEXT=/iam/accounts/
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
+
 USAGE="ID
 
   Delete account ID"
 
-. $(realpath $(dirname "$0")/../lib/common.sh)
+. "$LIB_DIR/rest-lib.sh"
 
-(( $# == 1 )) || usage_exit 1
+(( $# == 1 )) || usage_exit
 
 [ "$1" != "$UNAME" ] || err_exit "Hotel California Exception: you cannot delete yourself"
 
-rest_DELETE $1
+rest_DELETE /iam/accounts/$1

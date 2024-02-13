@@ -1,6 +1,11 @@
 #!/bin/bash
 
-CONTEXT=/iam/clients
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
+
 USAGE="CID
 
   Delete client CID
@@ -8,8 +13,8 @@ USAGE="CID
   POSITIONAL PARAMS
    CID       Unique client ID"
 
-. "$(dirname "$0")/../lib/common.sh"
+. "$LIB_DIR/rest-lib.sh"
 
-(($# == 1)) || usage_exit 1
+(($# == 1)) || usage_exit
 
-rest_DELETE /$1
+rest_DELETE /iam/clients/$1

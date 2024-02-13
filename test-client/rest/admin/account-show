@@ -6,12 +6,10 @@ set -euo pipefail
 LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
 . "$LIB_DIR/settings.sh"
 
-USAGE="[RID]
+USAGE="[ID]
 
-  Show role RID and its members or by default all roles."
+  Display account details for the logged-on user or for account ID"
 
 . "$LIB_DIR/rest-lib.sh"
 
-(($# <= 1)) || usage_exit
-
-rest_GET /iam/roles${1:+/$1}
+rest_GET /iam/accounts/${1:-${UNAME}}

@@ -1,17 +1,21 @@
 #!/bin/bash
 
-CONTEXT=/iam/roles
-USAGE="GID UID
+export LC_ALL="C"
+set -euo pipefail
 
-  Add account UID to role GID
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
+
+USAGE="RID UID
+
+  Add account UID to role RID
 
   POSITIONAL PARAMS
-   GID       Unique role ID (admins or users)
+   RID       Unique role ID (admins or users)
    UID       Unique account ID"
 
-. "$(dirname "$0")/../lib/common.sh"
+. "$LIB_DIR/rest-lib.sh"
 
-(($# == 2)) || usage_exit 1
+(($# == 2)) || usage_exit
 
-# Parse the standard attributes
-echo "$2" | rest_POST /$1
+echo "$2" | rest_POST /iam/roles/$1

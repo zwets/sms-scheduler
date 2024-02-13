@@ -1,6 +1,11 @@
 #!/bin/bash
 
-CONTEXT=/iam/clients
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
+
 USAGE="CID UID
 
   Remove account UID from client CID
@@ -9,8 +14,8 @@ USAGE="CID UID
    CID       Unique client ID
    UID       Unique account ID"
 
-. "$(dirname "$0")/../lib/common.sh"
+. "$LIB_DIR/rest-lib.sh"
 
-(($# == 2)) || usage_exit 1
+(($# == 2)) || usage_exit
 
-rest_DELETE /$1/$2
+rest_DELETE /iam/clients/$1/$2

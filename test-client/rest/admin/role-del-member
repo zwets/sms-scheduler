@@ -1,17 +1,21 @@
 #!/bin/bash
 
-CONTEXT=/iam/roles
-USAGE="GID UID
+export LC_ALL="C"
+set -euo pipefail
 
-  Remove account UID from role GID
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
+
+USAGE="RID UID
+
+  Remove member UID from role RID
 
   POSITIONAL PARAMS
-   GID       Unique role ID (admins, users)
+   RID       Unique role ID (admins, users)
    UID       Unique account ID"
 
-. "$(dirname "$0")/../lib/common.sh"
+. "$LIB_DIR/rest-lib.sh"
 
-(($# == 2)) || usage_exit 1
+(($# == 2)) || usage_exit
 
-# Parse the standard attributes
-rest_DELETE /$1/$2
+rest_DELETE /iam/roles/$1/$2

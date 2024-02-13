@@ -1,10 +1,15 @@
 #!/bin/bash
 
-CONTEXT=/actuator
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
+
 USAGE="[SUBKEY]
 
   Queries the actuator at $CONTEXT[/SUBKEY]"
 
-. $(realpath $(dirname "$0")/../lib/common.sh)
+. "$LIB_DIR/rest-lib.sh"
 
-rest_GET "${1+/$1}"
+rest_GET "/actuator${1+/$1}"

@@ -1,6 +1,11 @@
 #!/bin/bash
 
-CONTEXT=/iam/accounts
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
+
 USAGE="ID NAME EMAIL PASSWORD [GROUP ...]
 
   Create account ID with the given attributes
@@ -12,9 +17,9 @@ USAGE="ID NAME EMAIL PASSWORD [GROUP ...]
    PASSWORD  Password for the account
    GROUP     Roles and/or clients to assign to the account"
 
-. "$(dirname "$0")/../lib/common.sh"
+. "$LIB_DIR/rest-lib.sh"
 
-(($# >= 4)) || usage_exit 1
+(($# >= 4)) || usage_exit
 
 # Parse the standard attributes
 ID="$1" NAME="$2" EMAIL="$3" PASS="$4"
@@ -30,4 +35,4 @@ GRPS='[ ]'
 
 printf '{ "id": "%s", "name": "%s", "email": "%s", "password": "%s", "groups": %s }' \
     "$ID" "$NAME" "$EMAIL" "$PASS" "$GRPS" |
-rest_POST
+rest_POST /iam/accounts

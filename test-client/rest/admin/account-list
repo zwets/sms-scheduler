@@ -1,10 +1,15 @@
 #!/bin/bash
 
-CONTEXT=/iam/accounts
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+. "$LIB_DIR/settings.sh"
+
 USAGE="
 
   Lists all accounts"
 
-. $(realpath $(dirname "$0")/../lib/common.sh)
+. "$LIB_DIR/rest-lib.sh"
 
-rest_GET
+rest_GET /iam/accounts
