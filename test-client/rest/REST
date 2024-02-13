@@ -1,0 +1,21 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+# Be prepared for default invocation with is plaintext
+[ -n "${2-}" ] || RAWOUT=1
+
+# Source shared functions, default settings, and public keys for encryption
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
+
+USAGE="VERB [URL]
+
+  Perform any REST method on URL $CONTEXT[/URL]"
+
+. "$LIB_DIR/rest-lib.sh)
+
+((1 <= $# && $# <= 2)) || usage_exit 1
+
+rest_$1 ${2:+/$2}

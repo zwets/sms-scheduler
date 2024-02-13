@@ -3,7 +3,8 @@
 export LC_ALL="C"
 set -euo pipefail
 
-. "$(dirname "$(realpath "$0")")/lib/defaults"
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
 
 USAGE="[CLIENT] BIZKEY
 
@@ -13,7 +14,7 @@ USAGE="[CLIENT] BIZKEY
    CLIENT    Client ID [$CLIENT]
    BIZKEY    Identifier assigned by client"
 
-. "$(dirname "$(realpath "$0")")/lib/kafka-lib.sh"
+. "$LIB_DIR/kafka-lib.sh"
 
 (($# == 1)) || (($# == 2)) || usage_exit
 

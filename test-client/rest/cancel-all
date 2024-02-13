@@ -1,0 +1,13 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+# Source shared functions, default settings, and public keys for encryption
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
+
+. "$LIB_DIR/rest-lib.sh"
+
+(($# == 1)) && [[ "$1" == 'yes-i-am-sure' ]] || usage "'yes-i-am-sure'"
+rest_DELETE "/schedule"

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#  Command-line test client for sms-scheduler that writes to Kafka topic.
+#  Command-line test client for sms-scheduler that submits over REST
 
 export LC_ALL="C"
 set -euo pipefail
@@ -9,10 +9,10 @@ set -euo pipefail
 LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
 . "$LIB_DIR/settings.sh"
 
-# The functions in kafka-lib.sh will display this
+# The functions in rest-lib.sh will display this
 USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FILE]
 
-  Schedule an SMS through a Kafka event
+  Schedule an SMS over REST
 
   POSITIONAL PARAMS
    PUBFILE    Public key file to encrypt with [lib/\${CLIENT}.pub]
@@ -30,7 +30,7 @@ USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FIL
     +SEC1[+SEC2] between SEC1 and SEC2 (default 600) after now"
 
 # Source the libraries
-. "$LIB_DIR/kafka-lib.sh"
+. "$LIB_DIR/rest-lib.sh"
 . "$LIB_DIR/crypto-lib.sh"
 . "$LIB_DIR/schedule-lib.sh"
 
@@ -66,7 +66,7 @@ emit "SCHEDULE  = $SCHEDULE"
 emit "SENDER    = $SENDER"
 emit "RECIPIENT = $RECIPIENT"
 
-# Produce the message and pipe it onto the topic
-printf '{ "action": "schedule", "client": "%s", "target": "%s", "key": "%s", "schedule": "%s", "message": "%s" }\n' \
-        "$CLIENT" "$TARGET" "$BIZKEY" "$SCHEDULE" "$PAYLOAD" |
-kcat_send
+# Produce the message and POST it on the CLIENT URL
+printf '{ "target": "%s", "key": "%s", "schedule": "%s", "payload": "%s" }' \
+	"$TARGET" "$BIZKEY" "$SCHEDULE" "$PAYLOAD" |
+rest_POST /$CLIENT/schedule

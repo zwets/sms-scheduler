@@ -1,7 +1,15 @@
 #!/bin/bash
 
+export LC_ALL="C"
+set -euo pipefail
+
 CONTEXT=/block
-TEXTONLY=1
+RAWOUT=1
+
+# Source shared functions, default settings, and public keys for encryption
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
+
 USAGE="CLIENT [TARGET]
 
   Return list of blocks for CLIENT, or check block for TARGET
@@ -10,7 +18,7 @@ USAGE="CLIENT [TARGET]
    CLIENT    Client ID
    TARGET    Target ID"
 
-. "$(dirname "$0")/../lib/common.sh"
+. "$LIB_DIR/rest-lib.sh"
 
 (($# >= 1)) && (($# <= 2)) && [ -n "${1%%-*}" ] || usage_exit 1
 

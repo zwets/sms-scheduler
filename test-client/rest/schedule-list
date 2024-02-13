@@ -1,6 +1,14 @@
 #!/bin/bash
 
+export LC_ALL="C"
+set -euo pipefail
+
 CONTEXT=/schedule
+
+# Source shared functions, default settings, and public keys for encryption
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
+
 USAGE="[CLIENT [TARGET [INSTANCE]]]
 
   List schedule, limiting to client, target, instance
@@ -10,7 +18,7 @@ USAGE="[CLIENT [TARGET [INSTANCE]]]
    TARGET    Target ID
    INSTANCE  Unique ID"
 
-. "$(dirname "$0")/../lib/common.sh"
+. "$LIB_DIR/rest-lib.sh"
 
 (($# <= 3)) || [ -n "${1%%-*}" ] || usage_exit 1
 
