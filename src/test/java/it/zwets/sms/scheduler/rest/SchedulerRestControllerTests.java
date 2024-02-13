@@ -369,6 +369,8 @@ class SchedulerRestControllerTests {
                 node.get("target").asText(null),
                 node.get("key").asText(null),
                 node.get("status").asText(null),
+                node.get("due").asText(null),
+                node.get("deadline").asText(null),
                 node.get("started").asText(null),
                 node.get("ended").asText(null),
                 node.get("retries").asInt(-2));

@@ -19,8 +19,7 @@ USAGE="${USAGE:-}
 
   All CAPITALISED options can also be passed as environment vars
 "
-
-# The usage exit function pulls in the including script's USAGE string
+# Note how the usage_exit function pulls in the including script's USAGE string
 
 usage_exit() { echo "Usage: ${0##*/} [-dxrnvh] [-u UNAME] [-p PWORD] [-b BASEURL] [-c CONTEXT] ${USAGE}" >&2; exit ${1:-1}; }
 

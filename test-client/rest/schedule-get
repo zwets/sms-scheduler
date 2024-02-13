@@ -1,0 +1,22 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
+
+USAGE="[CLIENT] INSTANCE
+
+  Return process instance by INSTANCE id
+
+  POSITIONAL PARAMS
+   CLIENT    Client ID [$CLIENT]
+   INSTANCE  Unique process instance ID"
+
+. "$LIB_DIR/rest-lib.sh"
+
+(( $# == 2 )) && CLIENT="$1"   && shift || true
+(( $# == 1 )) && INSTANCE="$1" && shift || usage_exit
+
+rest_GET "/schedule/$CLIENT/by-id/$INSTANCE"

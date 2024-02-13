@@ -3,11 +3,22 @@
 export LC_ALL="C"
 set -euo pipefail
 
-# Source shared functions, default settings, and public keys for encryption
 LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
 . "$LIB_DIR/settings.sh"
 
+USAGE="CLIENT yes-i-am-sure
+
+  Remove all scheduled SMS for CLIENT.
+
+  You need to add the 'yes-i-am-sure' because this can have pretty
+  disastrous effects.
+
+  POSITIONAL PARAMS
+   CLIENT         Unique client ID
+   yes-i-am-sure  Literal required text"
+
 . "$LIB_DIR/rest-lib.sh"
 
-(($# == 1)) && [[ "$1" == 'yes-i-am-sure' ]] || usage "'yes-i-am-sure'"
-rest_DELETE "/schedule"
+(($# == 2)) && [ "$2" = 'yes-i-am-sure' ] || usage_exit
+
+rest_DELETE /$1?confirm=$2

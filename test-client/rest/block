@@ -1,0 +1,22 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
+
+USAGE="[CLIENT] TARGET
+
+  Block TARGET from receiving any further SMS
+
+  POSITIONAL PARAMETERS
+    CLIENT  Client ID [$CLIENT]
+    TARGET  Target assigned by client"
+
+. "$LIB_DIR/rest-lib.sh"
+
+(($# == 2)) && CLIENT="$1" && shift || true
+(($# == 1)) && TARGET="$1" || usage_exit
+
+echo | rest_PUT "/block/$CLIENT/$TARGET"

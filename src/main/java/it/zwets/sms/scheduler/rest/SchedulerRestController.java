@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
 
 import it.zwets.sms.scheduler.SmsSchedulerService;
@@ -90,7 +89,7 @@ public class SchedulerRestController {
         
         SmsStatus smsStatus = theService.getSmsStatus(instanceId);
         if (smsStatus == null || !clientId.equals(smsStatus.client())) {
-            throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return smsStatus;
     }

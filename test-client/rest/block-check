@@ -1,0 +1,29 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
+. "$LIB_DIR/crypto-lib.sh"
+
+TARGET="${TARGET:-$(encrock_phone ${RECIPIENT: -9})}"
+
+USAGE="[[CLIENT] TARGET]
+
+  Check if TARGET is blocked
+
+  POSITIONAL PARAMETERS
+    CLIENT  Client ID [$CLIENT]
+    TARGET  Target assigned by client [$TARGET]
+
+  TARGET defaults to the crock code for RECIPIENT [$RECIPIENT], so
+  set RECIPIENT=... in the environment to substitute its crock code."
+
+. "$LIB_DIR/rest-lib.sh"
+
+(($# == 2)) && CLIENT="$1" && shift || true
+(($# == 1)) && TARGET="$1" && shift || true
+(($# == 0)) || usage_exit
+
+rest_GET "/block/$CLIENT/$TARGET"

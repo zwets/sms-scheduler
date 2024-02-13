@@ -6,16 +6,16 @@ set -euo pipefail
 LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
 . "$LIB_DIR/settings.sh"
 
-USAGE="CLIENT INSTANCE
+USAGE="CLIENT BIZKEY
 
-  Cancel a scheduled send
+  Remove all scheduled SMS marked with BIZKEY by CLIENT
 
   POSITIONAL PARAMS
-   CLIENT    Client ID
-   INSTANCE  Unique process instance identifier"
+   CLIENT    Unique client ID
+   BIZKEY    Key assigned by client to one or more sends"
 
 . "$LIB_DIR/rest-lib.sh"
 
 (($# == 2)) || usage_exit 1
 
-rest_DELETE /schedule/$1/by-id/$2
+rest_DELETE /schedule/$1/by-key/$2

@@ -21,12 +21,11 @@ USAGE="${USAGE:-}
 
   All CAPITALISED options can also be passed as environment vars
 "
-
-# The usage exit function pulls in the including script's USAGE string
+# Note how the usage_exit function pulls in the including script's USAGE string
 
 usage_exit() { echo "Usage: ${0##*/} [-adrnvh] [-b BROKER ] [-t TOPIC] [-g GROUPID] [-p PART] [-o OFFSET] [-k KAFKAKEY] ${USAGE}" >&2; exit ${1:-1}; }
 
-# Parse the common options
+# Check common options
 
 TEMP=$(getopt -n "${0##*/}" -o 'adrnvhb:t:g:p:o:k:' -l 'all,dump,raw,dry-run,dry-run,verbose,help,broker:,topic:,group:,partition:,offset:,key:' -- "$@" || exit 1)
 eval set -- "$TEMP"

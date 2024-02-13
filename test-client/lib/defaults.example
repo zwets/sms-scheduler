@@ -5,7 +5,7 @@
 DEFAULT_CLIENT='test'
 DEFAULT_SCHEDULE='+0'
 DEFAULT_SENDER='TEST SENDER'
-DEFAULT_RECIPIENT='255123456789'
+DEFAULT_RECIPIENT='+255123456789'
 
 # For the REST clients
 DEFAULT_UNAME='admin'
@@ -19,4 +19,3 @@ DEFAULT_TOPIC='schedule-sms'
 
 # If sms-client cannot be found, specify full path here
 #SMS_CLIENT=/path/to/sms-client/bin/sms-client
-

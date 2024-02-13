@@ -3,22 +3,19 @@
 export LC_ALL="C"
 set -euo pipefail
 
-CONTEXT=/block
-
-# Source shared functions, default settings, and public keys for encryption
 LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
 . "$LIB_DIR/settings.sh"
 
 USAGE="CLIENT TARGET
 
-  Undo blocked target
+  Remove all scheduled SMS for TARGET in CLIENT
 
   POSITIONAL PARAMS
-   CLIENT         Unique client ID
-   TARGET         Identifies SMS destination"
+   CLIENT    Unique client ID
+   TARGET    Identifier for recipient assigned by client"
 
 . "$LIB_DIR/rest-lib.sh"
 
 (($# == 2)) || usage_exit 1
 
-rest_DELETE /$1/$2
+rest_DELETE /schedule/$1/by-target/$2

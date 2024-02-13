@@ -3,23 +3,16 @@
 export LC_ALL="C"
 set -euo pipefail
 
-CONTEXT=/schedule
-
-# Source shared functions, default settings, and public keys for encryption
 LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
 . "$LIB_DIR/settings.sh"
 
-USAGE="[CLIENT [TARGET [INSTANCE]]]
+USAGE="[CLIENT]
 
-  List schedule, limiting to client, target, instance
-
-  POSITIONAL PARAMS
-   CLIENT    Client ID
-   TARGET    Target ID
-   INSTANCE  Unique ID"
+  List all scheduled processes for CLIENT [$CLIENT]"
 
 . "$LIB_DIR/rest-lib.sh"
 
-(($# <= 3)) || [ -n "${1%%-*}" ] || usage_exit 1
+(($# == 1)) && CLIENT="$1" && shift || true
+(($# == 0)) || usage_exit
 
-rest_GET "${1:+/$1}${2:+/$2}${3:+$3}"
+rest_GET "/schedule/$CLIENT"

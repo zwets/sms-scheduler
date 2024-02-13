@@ -1,5 +1,6 @@
 package it.zwets.sms.scheduler;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ public class SmsSchedulerService {
 	
 	/** The DTO for reporting status */
     public final record SmsStatus(
-            String id, String client, String target, String key, String status, String started, String ended, int retries) { }
+            String id, String client, String target, String key, String status, String due, String deadline, String started, String ended, int retries) { }
 
     public SmsSchedulerService(ProcessEngine processEngine, DateHelper dateHelper) {
         this.runtimeService = processEngine.getRuntimeService();
@@ -65,7 +66,7 @@ public class SmsSchedulerService {
 
 		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.SMS_SCHEDULER_PROCESS_NAME, vars);
 		
-		return new SmsStatus(pi.getId(), clientId, targetId, clientKey, Constants.SMS_STATUS_NEW, dateHelper.format(pi.getStartTime()), null, 0);
+		return new SmsStatus(pi.getId(), clientId, targetId, clientKey, Constants.SMS_STATUS_NEW, null, null, dateHelper.format(pi.getStartTime()), null, 0);
     }
 	
 	// Query --------------------------------------------------------------------------------------
@@ -245,6 +246,8 @@ public class SmsSchedulerService {
                 (String) pvs.getOrDefault(Constants.VAR_TARGET_ID, null),
                 (String) pvs.getOrDefault(Constants.VAR_CLIENT_KEY, null),
                 (String) pvs.getOrDefault(Constants.VAR_SMS_STATUS, null),
+                dateHelper.format((Instant) pvs.getOrDefault(Constants.VAR_SMS_DUETIME, null)),
+                (String) pvs.getOrDefault(Constants.VAR_SMS_DEADLINE, null),
                 dateHelper.format(hpi.getStartTime()),
                 dateHelper.format(hpi.getEndTime()),
                 (int) pvs.getOrDefault(Constants.VAR_SMS_RETRIES, -1));

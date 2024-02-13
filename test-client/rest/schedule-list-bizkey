@@ -1,0 +1,23 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
+
+USAGE="[CLIENT] BIZKEY
+
+  List scheduled processes for BIZKEY
+
+  POSITIONAL PARAMETERS
+    CLIENT  Client ID [$CLIENT]
+    BIZKEY  Tag assigned by the client to one or more sends"
+
+. "$LIB_DIR/rest-lib.sh"
+. "$LIB_DIR/crypto-lib.sh"
+
+(($# == 2)) && CLIENT="$1" && shift || true
+(($# == 1)) && BIZKEY="$1" && shift || usage_exit
+
+rest_GET "/schedule/$CLIENT/by-key/$BIZKEY"

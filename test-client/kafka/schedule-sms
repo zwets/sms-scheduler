@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#  Command-line test client for sms-scheduler that writes to Kafka topic.
+#  Command-line test client for sms-scheduler that submits over Kafka
 
 export LC_ALL="C"
 set -euo pipefail

@@ -45,9 +45,18 @@ public class DateHelper {
 		return new Date();
 	}
 
+    /**
+     * Formats instant as ISO-8601 with the zone offset set in the constructor
+     * @param t an instant or null
+     * @return null or ISO 8601 string with offset
+     */
+    public String format(Instant t) {
+        return t == null ? null : formatter.format(t);
+    }
+    
 	/**
 	 * Formats date as ISO-8601 with the zone offset set in the constructor
-	 * @param d a date object or null
+	 * @param d a date or null
 	 * @return null or ISO 8601 string with offset
 	 */
 	public String format(Date d) {

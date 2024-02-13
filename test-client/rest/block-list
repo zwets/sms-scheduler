@@ -3,23 +3,17 @@
 export LC_ALL="C"
 set -euo pipefail
 
-CONTEXT=/block
-RAWOUT=1
-
-# Source shared functions, default settings, and public keys for encryption
 LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
 . "$LIB_DIR/settings.sh"
 
-USAGE="CLIENT [TARGET]
+RAWOUT=1
+USAGE="[CLIENT]
 
-  Return list of blocks for CLIENT, or check block for TARGET
-
-  POSITIONAL PARAMS
-   CLIENT    Client ID
-   TARGET    Target ID"
+  Return list of blocks for CLIENT [$CLIENT]"
 
 . "$LIB_DIR/rest-lib.sh"
 
-(($# >= 1)) && (($# <= 2)) && [ -n "${1%%-*}" ] || usage_exit 1
+(($# == 1)) && CLIENT="$1" && shift || true
+(($# == 0)) || usage_exit
 
-rest_GET "/$1${2:+/$2}"
+rest_GET "/block/$CLIENT"
