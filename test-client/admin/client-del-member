@@ -3,19 +3,19 @@
 export LC_ALL="C"
 set -euo pipefail
 
-LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
 . "$LIB_DIR/settings.sh"
 
-USAGE="RID UID
+USAGE="CID UID
 
-  Remove member UID from role RID
+  Remove account UID from client CID
 
   POSITIONAL PARAMS
-   RID       Unique role ID (admins, users)
+   CID       Unique client ID
    UID       Unique account ID"
 
 . "$LIB_DIR/rest-lib.sh"
 
 (($# == 2)) || usage_exit
 
-rest_DELETE /iam/roles/$1/$2
+rest_DELETE /iam/clients/$1/$2

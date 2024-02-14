@@ -3,7 +3,7 @@
 export LC_ALL="C"
 set -euo pipefail
 
-LIB_DIR="$(dirname "$(realpath "$0")")/../../lib"
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
 . "$LIB_DIR/settings.sh"
 
 RAWOUT=1
