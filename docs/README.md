@@ -83,10 +83,10 @@ for instructions.
 
 #### Test Client
 
-The `test-client` directory has scripts for both the IAM (account management)
-and message scheduling endpoints, over both REST and Kafka.
+The `client` directory has scripts for both the IAM (account management) REST
+endpoint, and the message scheduling REST and Kafka endpoints.
 
-See [test-client/README.md](test-client/README.md) for details.
+See [client/README.md](client/README.md) for details.
 
 
 ## Deployment
@@ -175,10 +175,14 @@ To see and follow the logging output
     sudo journalctl -xeu sms-scheduler
     sudo journalctl -fu sms-scheduler
 
-#### Set up the test-client
+#### Set up the on-machine client
 
 Before exposing the service to public internet, we need to remove the default
-`admin:test` account.  This requires the test-client to be installed on the machine:
+`admin:test` account.  This is done with a call to the admin REST interface,
+which most conveniently is done with the scripts in the `client` directory.
+
+Install the client in your home on the deployment machine (my convention is
+to clone repositories under `~/src` but any location will do):
 
     # As your own user (not root)
     mkdir ~/src
@@ -186,7 +190,7 @@ Before exposing the service to public internet, we need to remove the default
 
 Create the defaults file:
 
-    cd ~/src/sms-scheduler/test-client/lib
+    cd ~/src/sms-scheduler/client/lib
     cp defaults.example defaults
 
     # Edit: defaults
@@ -194,7 +198,7 @@ Create the defaults file:
 
 Check that the REST interface works
 
-    cd ~/src/sms-scheduler/test-client/admin
+    cd ~/src/sms-scheduler/client/admin
     ./account-list   # shows just the 'admin' account
 
 Create an admin account for yourself
@@ -205,33 +209,28 @@ Create an admin account for yourself
 
 Now edit the defaults file again, to have the username and password you created:
 
-    # Edit ~/src/sms-scheduler/test-client/lib/defaults
+    # Edit ~/src/sms-scheduler/client/lib/defaults
     DEFAULT_UNAME=...
     DEFAULT_PWORD=...
 
 Then protect it
 
-    chmod 0750 ~/src/sms-scheduler/test-client/lib
-    chmod 0640 ~/src/sms-scheduler/test-client/lib/defaults
+    chmod 0750 ~/src/sms-scheduler/client/lib
+    chmod 0640 ~/src/sms-scheduler/client/lib/defaults
 
 Now *remove* the admin user
 
     ./account-list
     ./account-delete admin
 
-
-Create
-
-Make 
-Also install the `sms-client` 
-
-#### Requirement: Apache reverse proxy
+#### Set up the Apache reverse proxy
 
 In `dev` and `test` we use `http` connections by default.  In `prod` we front
 the application with an Apache reverse proxy.
 
 Install and configure an Apache2 web server according to best practices.  In
-particular, set up **https** because the REST calls use basic auth by default.
+particular, set up **https** because the REST calls use basic auth by default;
+this will require e.g. LetsEncrypt.
 
 @TODO@ migrate to certificate-based authentication (we need them anyway on
 the clients).
@@ -242,17 +241,24 @@ we set by default.
 
 The SMS Scheduler port is set with the `server.port` property (built-in is 8082).
 
-#### Requirement: open firewall port
+#### Open firewall port
 
 On the web server, remember to open the port to the Apache2 proxy and ascertain
 that the port to SMS Scheduler (or any other component) is closed.
 
 @TODO@ better yet would be a VPN from the client(s) to the server.
 
-#### Requirement: test-client
+#### Done
 
-In order to test the installation 
+This completes the server-side deployment.
 
+
+## Local REST client
+
+With the server side set up, you can install the client on your local machine,
+just like above on the deployment machine.
+
+@TODO@ add the public keys!
 
 
 ## Implementation Notes

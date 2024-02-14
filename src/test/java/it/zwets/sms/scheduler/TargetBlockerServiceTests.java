@@ -8,34 +8,37 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 class TargetBlockerServiceTests {
-    
+   
+    private static final String CLIENT = "some-client";
+    private static final String TARGET = "the-target";
+ 
     @Autowired
     private TargetBlockerService service;
 
     @Test
     void testBasics() {
-        service.blockTarget("test-client", "test-target");
-        assertTrue(service.isTargetBlocked("test-client", "test-target"));
-        assertFalse(service.isTargetBlocked("test-client", "not-test-target"));
-        assertFalse(service.isTargetBlocked("not-test-client", "test-target"));
-        service.unblockTarget("test-client", "test-target");
-        assertFalse(service.isTargetBlocked("test-client", "test-target"));
+        service.blockTarget(CLIENT, TARGET);
+        assertTrue(service.isTargetBlocked(CLIENT, TARGET));
+        assertFalse(service.isTargetBlocked(CLIENT, "not-" + TARGET));
+        assertFalse(service.isTargetBlocked("not-" + CLIENT, TARGET));
+        service.unblockTarget(CLIENT, TARGET);
+        assertFalse(service.isTargetBlocked(CLIENT, TARGET));
     }
 
     @Test
     void testBlockTwice() {
-        service.blockTarget("test-client", "test-target");
-        service.blockTarget("test-client", "test-target");
-        assertTrue(service.isTargetBlocked("test-client", "test-target"));
+        service.blockTarget(CLIENT, TARGET);
+        service.blockTarget(CLIENT, TARGET);
+        assertTrue(service.isTargetBlocked(CLIENT, TARGET));
     }
 
     @Test
     void testUnblockTwice() {
-        service.blockTarget("test-client", "test-target");
-        service.unblockTarget("test-client", "test-target");
-        assertFalse(service.isTargetBlocked("test-client", "test-target"));
-        service.unblockTarget("test-client", "test-target");
-        assertFalse(service.isTargetBlocked("test-client", "test-target"));
+        service.blockTarget(CLIENT, TARGET);
+        service.unblockTarget(CLIENT, TARGET);
+        assertFalse(service.isTargetBlocked(CLIENT, TARGET));
+        service.unblockTarget(CLIENT, TARGET);
+        assertFalse(service.isTargetBlocked(CLIENT, TARGET));
     }
 
 }
