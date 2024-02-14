@@ -50,11 +50,8 @@ USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FIL
 # If TARGET is not set, make it the encrocked recipient
 [ -n "${TARGET:-}" ] || TARGET="$(encrock_phone "${RECIPIENT: -9}")"
 
-# Read the PUBKEY from PUBFILE
-PUBKEY="$(cat "$PUBFILE")" || err_exit "failed to read pubkey file: $PUBFILE"
-
 # Produce the encrypted payload for CLIENT
-PAYLOAD="$(encrypted_sms "$PUBKEY" "$RECIPIENT" "$SENDER" "$FILE")" || err_exit "failed to produce encrypted SMS"
+PAYLOAD="$(encrypted_sms "$PUBFILE" "$RECIPIENT" "$SENDER" "$FILE")" || err_exit "failed to produce encrypted SMS"
 
 # Dump the standard diags
 dump_diags

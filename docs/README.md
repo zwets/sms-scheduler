@@ -82,17 +82,28 @@ See [test-client/README.md](test-client/README.md) for details.
 
 #### Requirements: PostgreSQL
 
-In `dev` Flowable uses an in-mem database by default.  In `test` there is the
-option to use that, or (better) use an on-disc SQLite3 database.  In `prod`
-we use a PostgreSQL database.
+In `dev` Flowable uses an in-mem database by default.  In `test` use either
+that or (for persistency across restarts) an on-disc SQLite3 database.
+In `prod` we use a PostgreSQL database.
 
 Install and configure a PostgreSQL database according to best practices.
 
+    # E.g. on a 8 core 16GB machine with SSD
+    max_connections = 64            # max(4*cores,100) but we can do with less
+    shared_buffers = 1280MB         # allocated at all times (less than 1/4 of RAM)
+    work_mem = 64MB                 # increase with complexity but times workers
+    maintenance_work_mem = 256M     # only eaten occasionally 512MB fine too
+    effective_cache_size = 8GB      # memory available under normal load (1/2 RAM)
+    random_page_cost = 1.0          # on SSD
+
 Create the database and user:
 
+    sudo -u postgres createuser -P smes  # password in application.properties
+    sudo -u postgres createdb -O smes smes_prod
 
 Test that you can connect to the database:
 
+    psql -U smes -W -h localhost smes_prod
 
 #### Requirements: Apache reverse proxy
 

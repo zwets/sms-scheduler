@@ -13,14 +13,14 @@ sms_client() {
     "$SMS_CLIENT" "$@"
 }
 
-# Encrypt stdin to stdout with pubkey $1
+# Encrypt stdin to stdout with pubfile $1
 pubkey_encrypt() {
     sms_client encrypt "$1"
 }
 
 # Output encrypted SMS with pubkey $1 to recipient $2 from sender $3 from optional file $4
 encrypted_sms() {
-    { printf 'To: %s\nSender: %s\n\n' "$2" "$3"; cat "${4:--}"; } | sms_client encrypt "$1"
+    sms_client enc-sms "$1" "$2" "$3" "$(cat "${4:--}")"
 }
 
 encrock_phone() {
