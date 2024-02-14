@@ -223,6 +223,9 @@ Now *remove* the admin user
     ./account-list
     ./account-delete admin
 
+If you intend to use the `schedule-sms` scripts, you will want to add the
+client public keys to lib/keys.  See the README.txt in that directory.
+
 #### Set up the Apache reverse proxy
 
 In `dev` and `test` we use `http` connections by default.  In `prod` we front
@@ -236,15 +239,13 @@ this will require e.g. LetsEncrypt.
 the clients).
 
 Make the proxy set the `X-Forwarded-For` and `X-Forwarded-Proto` headers.  The
-scheduler's application.properties needs `server.use-forward-headers=true`, which
-we set by default.
+scheduler's application.properties needs `server.use-forward-headers=true`,
+which is set in the default properties.
 
-The SMS Scheduler port is set with the `server.port` property (built-in is 8082).
+The SMS Scheduler port is the `server.port` property (built-in is 8082).
 
-#### Open firewall port
-
-On the web server, remember to open the port to the Apache2 proxy and ascertain
-that the port to SMS Scheduler (or any other component) is closed.
+> **Don't forget** to open the _public_ port on your firewall AND close the
+> ports to all other applications on the machine!
 
 @TODO@ better yet would be a VPN from the client(s) to the server.
 
@@ -255,10 +256,8 @@ This completes the server-side deployment.
 
 ## Local REST client
 
-With the server side set up, you can install the client on your local machine,
-just like above on the deployment machine.
-
-@TODO@ add the public keys!
+With the server set up, you can install the client on your local machine.
+Installation is just like above on the deployment machine.
 
 
 ## Implementation Notes
