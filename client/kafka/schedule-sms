@@ -15,7 +15,7 @@ USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FIL
   Schedule an SMS through a Kafka event
 
   POSITIONAL PARAMS
-   PUBFILE    Public key file to encrypt with [lib/\${CLIENT}.pub]
+   PUBFILE    Public key file to encrypt with [lib/keys/\${CLIENT}.pub]
    CLIENT     Client on whose behalf you are sending [$CLIENT]
    TARGET     Client identifier for the recipient [encrock(\$RECIPIENT)]
    BIZKEY     Client identifier for this specific send [\${CLIENT}-\${RANDOM}]

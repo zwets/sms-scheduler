@@ -48,7 +48,7 @@ NOT_REALLY="${NOT_REALLY:-}"
 # Generate default (pseudo) unique value for BIZKEY
 BIZKEY="${BIZKEY:-${CLIENT}-${RANDOM}$$}"
 
-# Default the PUBFILE to '$CLIENT.pub' in this LIB_DIR
-PUBFILE="${PUBFILE:-$LIB_DIR/${CLIENT}.pub}"
+# Default the PUBFILE to 'LIB_DIR/keys/$CLIENT.pub'
+PUBFILE="${PUBFILE:-$LIB_DIR/keys/${CLIENT}.pub}"
 
 # vim: sts=4:sw=4:ai:si:et
