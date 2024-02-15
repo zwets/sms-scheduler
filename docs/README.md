@@ -205,23 +205,37 @@ Create an admin account for yourself
 
     # This creates account USERNAME as a member of all three current groups
     # Make sure the PASSWORD is long and complex (you will store it in defaults!)
-    ./create-account USERNAME YOUR_FULL_NAME EMAIL PASSWORD admins users test
+    ./account-create $USER FULL_NAME EMAIL PASSWORD admins users test
 
-Now edit the defaults file again, to have the username and password you created:
+    # Check that it works
+    ./account-check -u $USER -p PASSWORD
 
-    # Edit ~/src/sms-scheduler/client/lib/defaults
+Then make it the default (so you won't need the -u ... -p ... every time)
+
+    # Edit: lib/defaults
     DEFAULT_UNAME=...
     DEFAULT_PWORD=...
 
-Then protect it
-
+    # And protect it
     chmod 0750 ~/src/sms-scheduler/client/lib
     chmod 0640 ~/src/sms-scheduler/client/lib/defaults
 
-Now *remove* the admin user
+And **IMPORTANT** now remove the default 'admin' account
 
-    ./account-list
     ./account-delete admin
+
+Create a group for each client (and optionally add yourself to them)
+
+    for CLIENT in client1 client2 ...; do
+        ./client-create $CLIENT
+        ./client-add-member $CLIENT $USER
+    done
+
+Create more user accounts (**note: you must add them to 'users' at least)
+
+    for ACCT in acct1 acct2 ...; do
+        ./account-create acct1 FULLNAME EMAIL PASSWORD users
+    done
 
 If you intend to use the `schedule-sms` scripts, you will want to add the
 client public keys to lib/keys.  See the README.txt in that directory.
