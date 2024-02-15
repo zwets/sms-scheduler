@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# This script was just for testing the various authorisation rules.
+# It creates 8 accounts with every possible combination of memberships:
+#  - Member of role 'users': yes/no
+#  - Member of role 'admins': yes/no
+#  - Member of client 'test': yes/no
+
+export LC_ALL="C"
+set -euo pipefail
+
+create_dummy() {
+    ACC="$1"
+    shift
+    ../account-create -dv $ACC $ACC $ACC $ACC "$@"
+}
+
+create_dummy nnn
+create_dummy nnt test
+create_dummy nan admins
+create_dummy nat admins test
+create_dummy unn users
+create_dummy unt users test
+create_dummy uan users admins
+create_dummy uat users admins test

@@ -198,8 +198,8 @@ Create the defaults file:
 
 Check that the REST interface works
 
-    cd ~/src/sms-scheduler/client/admin
-    ./account-list   # shows just the 'admin' account
+    cd ~/src/sms-scheduler/client/iam
+    ./iam/account-list   # shows just the 'admin' account
 
 Create an admin account for yourself
 
