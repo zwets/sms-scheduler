@@ -10,7 +10,7 @@
    </parent>
    <groupId>it.zwets</groupId>
    <artifactId>sms-scheduler</artifactId>
-   <version>1.0.0-SNAPSHOT</version>
+   <version>1.0.0</version>
    <packaging>war</packaging>
    <name>SMS Scheduler</name>
    <description>Secure SMS Scheduler based on Flowable</description>
