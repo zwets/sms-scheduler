@@ -66,4 +66,4 @@ emit "RECIPIENT = $RECIPIENT"
 # Produce the message and POST it on the CLIENT URL
 printf '{ "target": "%s", "key": "%s", "schedule": "%s", "payload": "%s" }' \
 	"$TARGET" "$BIZKEY" "$SCHEDULE" "$PAYLOAD" |
-rest_POST /$CLIENT/schedule
+rest_POST /schedule/$CLIENT

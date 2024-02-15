@@ -21,4 +21,4 @@ USAGE="CLIENT yes-i-am-sure
 
 (($# == 2)) && [ "$2" = 'yes-i-am-sure' ] || usage_exit
 
-rest_DELETE /$1?confirm=$2
+rest_DELETE /schedule/$1?confirm=$2
