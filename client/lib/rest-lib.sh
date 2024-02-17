@@ -6,41 +6,45 @@ set -euo pipefail
 USAGE="${USAGE:-}
 
   COMMON OPTIONS
-   -u,--username=UNAME    Set the username for authentication [$UNAME]
-   -p,--password=PWORD    Set the password for authentication [$PWORD]
-   -b,--base-url=BASEURL  Set the base URL [$BASEURL]
-   -c,--context=CONTEXT   Set the request context [$CONTEXT]
-   -d,--dump              Write request entity to stderr (PUT, POST)
-   -x,--headers           Write response headers to stderr
-   -r,--raw               Do not use jq to pretty print JSON
-   -n,--dry-run           Do everything except the real thing
-   -v,--verbose           Display diagnostic output
-   -h,--help              Display usage information
+   -u,--username=UNAME        Set the username for authentication [$UNAME]
+   -p,--password=PWORD        Set the password for authentication [$PWORD]
+   -b,--base-url=BASEURL      Set the base URL [$BASEURL]
+   -c,--context=CONTEXT       Set the request context [$CONTEXT]
+   -t,--content-type=CONTYPE  Set the Content-Type header value [$CONTYPE]
+   -a,--accept=ACCEPT         Set the Accept header value [$ACCEPT]
+   -d,--dump                  Write request entity to stderr (PUT, POST)
+   -x,--headers               Write response headers to stderr
+   -r,--raw                   Do not use jq to pretty print JSON
+   -n,--dry-run               Do everything except the real thing
+   -v,--verbose               Display diagnostic output
+   -h,--help                  Display usage information
 
   All CAPITALISED options can also be passed as environment vars
 "
 # Note how the usage_exit function pulls in the including script's USAGE string
 
-usage_exit() { echo "Usage: ${0##*/} [-dxrnvh] [-u UNAME] [-p PWORD] [-b BASEURL] [-c CONTEXT] ${USAGE}" >&2; exit ${1:-1}; }
+usage_exit() { echo "Usage: ${0##*/} [-dxrnvh] [-u UNAME] [-p PWORD] [-b BASEURL] [-c CONTEXT] [-t CONTYPE] [-a ACCEPT] ${USAGE}" >&2; exit ${1:-1}; }
 
 # Parse the common options
 
-TEMP=$(getopt -n "${0##*/}" -o 'dxrnvhu:p:b:c:' -l 'dump,headers,raw,dry-run,verbose,help,username:,password:,base-url:,context:' -- "$@" || exit 1)
+TEMP=$(getopt -n "${0##*/}" -o 'dxrnvhu:p:b:c:t:a:' -l 'dump,headers,raw,dry-run,verbose,help,username:,password:,base-url:,context:,content-type:,accept:' -- "$@" || exit 1)
 eval set -- "$TEMP"
 unset TEMP
 
 while true; do
     case "$1" in
-        -u|--u*)    UNAME="$2";   shift 2 ;;
-        -p|--p*)    PWORD="$2";   shift 2 ;;
-        -b|--b*)    BASEURL="$2"; shift 2 ;;
-        -c|--c*)    CONTEXT="$2"; shift 2 ;;
-        -d|--du*)   DUMP=1;       shift ;;
-        -x|--hea*)  HEADERS=1;    shift ;;
-        -r|--r*)    RAWOUT=1;     shift ;;
-        -n|--dr*)   NOT_REALLY=1; DUMP=1; shift ;;
-        -v|--v*)    VERBOSE=1;    shift ;;
-        -h|--hel*)  usage_exit 0  ;;
+        -u|--u*)       UNAME="$2";   shift 2 ;;
+        -p|--p*)       PWORD="$2";   shift 2 ;;
+        -b|--b*)       BASEURL="$2"; shift 2 ;;
+        -c|--contex*)  CONTEXT="$2"; shift 2 ;;
+        -a|--a*)       ACCEPT="$2";  shift 2 ;;
+        -t|--conten*)  CONTYPE="$2"; shift 2 ;;
+        -d|--du*)      DUMP=1;       shift ;;
+        -x|--hea*)     HEADERS=1;    shift ;;
+        -r|--r*)       RAWOUT=1;     shift ;;
+        -n|--dr*)      NOT_REALLY=1; DUMP=1; shift ;;
+        -v|--v*)       VERBOSE=1;    shift ;;
+        -h|--hel*)     usage_exit 0  ;;
         --) shift; break ;;
         *)  err_exit "lpt1 on fire!" ;;
     esac
@@ -62,6 +66,8 @@ JQ="$(which jq 2>/dev/null)" || err_exit "command not found: jq (do: apt install
 dump_diags() {
     emit "BASEURL   = $BASEURL"
     emit "CONTEXT   = $CONTEXT"
+    emit "CONTYPE   = $CONTYPE"
+    emit "ACCEPT    = $ACCEPT"
     emit "UNAME     = $UNAME"
     emit "PWORD     = $PWORD"
 }
@@ -81,8 +87,7 @@ rest_call() {
     [ $NOT_REALLY ] && echo "REST $@" >&2 && cat >/dev/null ||
     curl -sS --fail${VERBOSE:+-with-body} ${HEADERS:+--dump-header /dev/stderr} \
         -u "$UNAME:$PWORD" \
-        -H 'Accept: application/json' \
-        -H 'Accept: text/plain' \
+        -H "Accept: $ACCEPT" \
         "$@" |
         json_filter
 }
@@ -90,7 +95,7 @@ rest_call() {
 # Perform verb $1 on $2 of data from file $3 or stdin
 rest_with_data() {
     F="${3:--}" && [ "$F" = '-' ] || [ -f "$F" ] || err_exit "no such file: $F"
-    dump_filter "$F" | rest_call -X $1 -H 'Content-Type: application/json' --data "@-" "${BASEURL}${CONTEXT}${2:-}"
+    dump_filter "$F" | rest_call -X $1 -H "Content-Type: $CONTYPE" --data-binary "@-" "${BASEURL}${CONTEXT}${2:-}"
 }
 
 # Perform verb $1 on $2 as multipart/form-data from file $3 or stdin
