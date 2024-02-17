@@ -30,7 +30,7 @@ public class SmsSchedulerService {
 	
 	/** The DTO for reporting status */
     public final record SmsStatus(
-            String id, String client, String target, String key, String status, String due, String deadline, String started, String ended, int retries) { }
+            String id, String client, String batch, String key, String target, String status, String due, String deadline, String started, String ended, int retries) { }
 
     public SmsSchedulerService(ProcessEngine processEngine, DateHelper dateHelper) {
         this.runtimeService = processEngine.getRuntimeService();
@@ -52,21 +52,22 @@ public class SmsSchedulerService {
      */
 	@Transactional
     public SmsStatus scheduleSms(
-    		String clientId, String targetId, String clientKey, String schedule, String payload) {
+    		String clientId, String batchId, String clientKey, String targetId, String schedule, String payload) {
 
-		LOG.debug("SmsSchedulerService::scheduleSms({},{},{},{},{})", clientId, targetId, clientKey, schedule, payload);
+		LOG.debug("SmsSchedulerService::scheduleSms({},{},{},{},{},{})", clientId, batchId, clientKey, targetId, schedule, payload);
 		
 		Map<String,Object> vars = new HashMap<String,Object>();
 		
 		vars.put(Constants.VAR_CLIENT_ID, clientId);
+        vars.put(Constants.VAR_BATCH_ID, batchId);
+        vars.put(Constants.VAR_CLIENT_KEY, clientKey);
 		vars.put(Constants.VAR_TARGET_ID, targetId);
-		vars.put(Constants.VAR_CLIENT_KEY, clientKey);
 		vars.put(Constants.VAR_SCHEDULE, schedule);
 		vars.put(Constants.VAR_PAYLOAD, payload);
 
 		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.SMS_SCHEDULER_PROCESS_NAME, vars);
 		
-		return new SmsStatus(pi.getId(), clientId, targetId, clientKey, Constants.SMS_STATUS_NEW, null, null, dateHelper.format(pi.getStartTime()), null, 0);
+		return new SmsStatus(pi.getId(), clientId, batchId, clientKey, targetId, Constants.SMS_STATUS_NEW, null, null, dateHelper.format(pi.getStartTime()), null, 0);
     }
 	
 	// Query --------------------------------------------------------------------------------------
@@ -119,19 +120,19 @@ public class SmsSchedulerService {
     }
 
     @Transactional
-    public List<SmsStatus> getStatusListByTarget(String clientId, String targetId) {
-		LOG.trace("SmsSchedulerService::getStatusList(clientId={}, targetId={})", clientId, targetId);
-    	
-		return historyService
-        		.createHistoricProcessInstanceQuery()
+    public List<SmsStatus> getStatusListByBatch(String clientId, String batchId) {
+        LOG.trace("SmsSchedulerService::getStatusList(clientId={}, batchId={})", clientId, batchId);
+        
+        return historyService
+                .createHistoricProcessInstanceQuery()
                 .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
-         		.variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
-        		.variableValueEquals(Constants.VAR_TARGET_ID, targetId)
-        		.includeProcessVariables()
-    			.orderByProcessInstanceStartTime().asc()
-        		.list().stream()
-        		.map(this::hpiToSmsStatus)
-        		.toList();
+                .variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .variableValueEquals(Constants.VAR_BATCH_ID, batchId)
+                .includeProcessVariables()
+                .orderByProcessInstanceStartTime().asc()
+                .list().stream()
+                .map(this::hpiToSmsStatus)
+                .toList();
     }
 
     @Transactional
@@ -148,6 +149,22 @@ public class SmsSchedulerService {
                 .list().stream()
                 .map(this::hpiToSmsStatus)
                 .toList();
+    }
+
+    @Transactional
+    public List<SmsStatus> getStatusListByTarget(String clientId, String targetId) {
+		LOG.trace("SmsSchedulerService::getStatusList(clientId={}, targetId={})", clientId, targetId);
+    	
+		return historyService
+        		.createHistoricProcessInstanceQuery()
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+         		.variableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+        		.variableValueEquals(Constants.VAR_TARGET_ID, targetId)
+        		.includeProcessVariables()
+    			.orderByProcessInstanceStartTime().asc()
+        		.list().stream()
+        		.map(this::hpiToSmsStatus)
+        		.toList();
     }
     
     // Cancel ----------------------------------------------------------------------------------------
@@ -167,6 +184,22 @@ public class SmsSchedulerService {
         }
     }
 
+    @Transactional
+    public void cancelBatch(String clientId, String batchId) {
+        LOG.trace("cancelBatch({},{})", clientId, batchId);
+        
+        for (Execution ex : runtimeService.createExecutionQuery()
+                .processDefinitionKey(Constants.SMS_SCHEDULER_PROCESS_NAME)
+                .activityId(Constants.ACTIVITY_RECV_CANCEL)
+                .processVariableValueEquals(Constants.VAR_CLIENT_ID, clientId)
+                .processVariableValueEquals(Constants.VAR_BATCH_ID, batchId)
+                .list())
+        {
+            LOG.debug("Canceling SMS by batch {}:{}: {}", clientId, batchId, ex.getProcessInstanceId());
+            runtimeService.trigger(ex.getId());
+        }
+    }
+    
     @Transactional
     public void cancelByClientKey(String clientId, String clientKey) {
         LOG.trace("cancelByClientKey({},{})", clientId, clientKey);
@@ -243,8 +276,9 @@ public class SmsSchedulerService {
         return new SmsStatus(
                 hpi.getId(),
                 (String) pvs.getOrDefault(Constants.VAR_CLIENT_ID, null),
-                (String) pvs.getOrDefault(Constants.VAR_TARGET_ID, null),
+                (String) pvs.getOrDefault(Constants.VAR_BATCH_ID, null),
                 (String) pvs.getOrDefault(Constants.VAR_CLIENT_KEY, null),
+                (String) pvs.getOrDefault(Constants.VAR_TARGET_ID, null),
                 (String) pvs.getOrDefault(Constants.VAR_SMS_STATUS, null),
                 dateHelper.format((Instant) pvs.getOrDefault(Constants.VAR_SMS_DUETIME, null)),
                 (String) pvs.getOrDefault(Constants.VAR_SMS_DEADLINE, null),

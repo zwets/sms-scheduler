@@ -24,6 +24,7 @@ err_exit() { echo "${0##*/}: $*" >&2; exit 1; }
 # Give all script variables their DEFAULT value unless they were already
 # set, either by the user in the env or ny the scripts sourcing us
 CLIENT="${CLIENT:-$DEFAULT_CLIENT}"
+BATCH="${BATCH:-${DEFAULT_BATCH:-}}"
 SCHEDULE="${SCHEDULE:-$DEFAULT_SCHEDULE}"
 SENDER="${SENDER:-$DEFAULT_SENDER}"
 RECIPIENT="${RECIPIENT:-$DEFAULT_RECIPIENT}"
@@ -31,6 +32,8 @@ UNAME="${UNAME:-$DEFAULT_UNAME}"
 PWORD="${PWORD:-$DEFAULT_PWORD}"
 BASEURL="${BASEURL:-$DEFAULT_BASEURL}"
 CONTEXT="${CONTEXT:-$DEFAULT_CONTEXT}"
+CONTYPE="${CONTYPE:-$DEFAULT_CONTYPE}"
+ACCEPT="${ACCEPT:-$DEFAULT_ACCEPT}"
 BROKER="${BROKER:-$DEFAULT_BROKER}"
 TOPIC="${TOPIC:-$DEFAULT_TOPIC}"
 

@@ -65,8 +65,9 @@ RECV">
         <flowable:executionListener event="end" delegateExpression="${processLogger}"></flowable:executionListener>
         <flowable:eventType xmlns:flowable="http://flowable.org/bpmn"><![CDATA[schedule]]></flowable:eventType>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="client" sourceType="string" target="clientId"></flowable:eventOutParameter>
-        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="target" sourceType="string" target="targetId"></flowable:eventOutParameter>
+        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="batch" sourceType="string" target="batchId"></flowable:eventOutParameter>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="key" sourceType="string" target="clientKey"></flowable:eventOutParameter>
+        <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="target" sourceType="string" target="targetId"></flowable:eventOutParameter>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="schedule" sourceType="string" target="schedule"></flowable:eventOutParameter>
         <flowable:eventOutParameter xmlns:flowable="http://flowable.org/bpmn" source="message" sourceType="string" target="payload"></flowable:eventOutParameter>
       </extensionElements>

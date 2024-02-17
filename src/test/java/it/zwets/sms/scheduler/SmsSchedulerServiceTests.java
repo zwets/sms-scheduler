@@ -40,32 +40,33 @@ class SmsSchedulerServiceTests {
     @Test
     void testNullClientThrows() {
         assertThrows(RuntimeException.class, 
-                () -> service.scheduleSms(null, null, null, scheduleIn(10), "testNullClientFails"));
+                () -> service.scheduleSms(null, null, null, null, scheduleIn(10), "testNullClientFails"));
     }
     
     @Test
     void testNullScheduleThrows() {
         assertThrows(RuntimeException.class, 
-                () -> service.scheduleSms(null, null, null, null, "testNullScheduleFails"));
+                () -> service.scheduleSms(null, null, null, null, null, "testNullScheduleFails"));
     }
     
     @Test
     void testNullPayloadThrows() {
         assertThrows(RuntimeException.class, 
-                () -> service.scheduleSms(null, null, null, scheduleIn(10), null));
+                () -> service.scheduleSms(null, null, null, null, scheduleIn(10), null));
     }
     
     @Test
     void testBasics() {
-        SmsStatus s = service.scheduleSms(CLIENT, "target", "key", scheduleIn(10), "testBasics");
+        SmsStatus s = service.scheduleSms(CLIENT, "batch", "key", "target", scheduleIn(10), "testBasics");
         
         String id = s.id();
         assertNotNull(id);
         
         assertEquals(Constants.SMS_STATUS_NEW, s.status());
         assertEquals(CLIENT, s.client());
-        assertEquals("target", s.target());
+        assertEquals("batch", s.batch());
         assertEquals("key", s.key());
+        assertEquals("target", s.target());
         assertNotNull(s.started());
         assertNull(s.ended());
         assertEquals(0, s.retries());
@@ -76,8 +77,9 @@ class SmsSchedulerServiceTests {
         assertEquals(Constants.SMS_STATUS_SCHEDULED, r.status());
         assertEquals(s.id(), r.id());
         assertEquals(s.client(), r.client());
-        assertEquals(s.target(), r.target());
+        assertEquals(s.batch(), r.batch());
         assertEquals(s.key(), r.key());
+        assertEquals(s.target(), r.target());
         assertEquals(s.started(), r.started());
         assertEquals(s.ended(), r.ended());
         assertEquals(s.retries(), r.retries());
@@ -88,7 +90,7 @@ class SmsSchedulerServiceTests {
 
     @Test
     void testImmediate() {
-        SmsStatus s = service.scheduleSms(CLIENT, null, null, scheduleNow(), "testImmediate");
+        SmsStatus s = service.scheduleSms(CLIENT, null, null, null, scheduleNow(), "testImmediate");
         
         String id = s.id();
         assertNotNull(id);
@@ -100,7 +102,7 @@ class SmsSchedulerServiceTests {
 
     @Test
     void testImmediateWithWait() {
-        SmsStatus s = service.scheduleSms(CLIENT, null, null, scheduleNow(), "testImmediateWithWait");
+        SmsStatus s = service.scheduleSms(CLIENT, null, null, null, scheduleNow(), "testImmediateWithWait");
         
         String id = s.id();
         assertNotNull(id);
@@ -117,7 +119,7 @@ class SmsSchedulerServiceTests {
 
     @Test
     void testDelayedWithWait() {
-        SmsStatus s = service.scheduleSms(CLIENT, null, null, scheduleIn(1), "testDelayedWithWait");
+        SmsStatus s = service.scheduleSms(CLIENT, null, null, null, scheduleIn(1), "testDelayedWithWait");
         
         String id = s.id();
         assertNotNull(id);
@@ -138,7 +140,7 @@ class SmsSchedulerServiceTests {
 
     @Test
     void testCancelSms() {
-        SmsStatus s = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelSms");
+        SmsStatus s = service.scheduleSms(CLIENT, null, null, null, scheduleIn(5), "testCancelSms");
         
         String id = s.id();
         assertNotNull(id);
@@ -154,20 +156,41 @@ class SmsSchedulerServiceTests {
     }
 
     @Test
+    void testCancelBatch() {
+        
+        final String BATCH = "batch-id";
+        final String NOT_BATCH = "not-" + BATCH;
+        
+        String id0 = service.scheduleSms(NOT_CLIENT, BATCH, null, null, scheduleIn(5), "testCancelBatch0").id();
+        String id1 = service.scheduleSms(CLIENT, BATCH, null, null, scheduleIn(5), "testCancelBatch1").id();
+        String id2 = service.scheduleSms(CLIENT, NOT_BATCH, null, null, scheduleIn(5), "testCancelBatch2").id();
+        String id3 = service.scheduleSms(CLIENT, null, null, null, scheduleIn(5), "testCancelBatch3").id();
+        
+        service.cancelBatch(CLIENT, BATCH);
+       
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
+        assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id3).status());
+    }
+
+    @Test
     void testCancelByClientKey() {
         
         final String KEY = "cancel-key";
         final String NO_KEY = "not-key";
         
-        String id0 = service.scheduleSms(NOT_CLIENT, null, KEY, scheduleIn(5), "testCancelAllForTarget0").id();
-        String id1 = service.scheduleSms(CLIENT, null, KEY, scheduleIn(5), "testCancelByClientKey1").id();
-        String id2 = service.scheduleSms(CLIENT, null, NO_KEY, scheduleIn(5), "testCancelByClientKey2").id();
+        String id0 = service.scheduleSms(NOT_CLIENT, null, KEY, null, scheduleIn(5), "testCancelByClientKey0").id();
+        String id1 = service.scheduleSms(CLIENT, null, KEY, null, scheduleIn(5), "testCancelByClientKey1").id();
+        String id2 = service.scheduleSms(CLIENT, null, NO_KEY, null, scheduleIn(5), "testCancelByClientKey2").id();
+        String id3 = service.scheduleSms(CLIENT, null, null, null, scheduleIn(5), "testCancelByClientKey3").id();
         
         service.cancelByClientKey(CLIENT, KEY);
        
         assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
         assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
         assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id3).status());
     }
 
     @Test
@@ -176,24 +199,26 @@ class SmsSchedulerServiceTests {
         final String TARGET = "cancel-target";
         final String NO_TARGET = "not-target";
         
-        String id0 = service.scheduleSms(NOT_CLIENT, TARGET, null, scheduleIn(5), "testCancelAllForTarget0").id();
-        String id1 = service.scheduleSms(CLIENT, TARGET, null, scheduleIn(5), "testCancelAllForTarget1").id();
-        String id2 = service.scheduleSms(CLIENT, NO_TARGET, null, scheduleIn(5), "testCancelAllForTarget2").id();
+        String id0 = service.scheduleSms(NOT_CLIENT, null, null, TARGET, scheduleIn(5), "testCancelAllForTarget0").id();
+        String id1 = service.scheduleSms(CLIENT, null, null, TARGET, scheduleIn(5), "testCancelAllForTarget1").id();
+        String id2 = service.scheduleSms(CLIENT, null, null, NO_TARGET, scheduleIn(5), "testCancelAllForTarget2").id();
+        String id3 = service.scheduleSms(CLIENT, null, null, null, scheduleIn(5), "testCancelAllForTarget3").id();
         
         service.cancelAllForTarget(CLIENT, TARGET);
        
         assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
         assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
         assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id3).status());
     }
 
     @Test
     void testCancelAllForClient() {
         
-        String id0 = service.scheduleSms(NOT_CLIENT, null, null, scheduleIn(5), "testCancelAllForClient0").id();
-        String id1 = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelAllForClient1").id();
-        String id2 = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelAllForClient2").id();
-        String id3 = service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelAllForClient2").id();
+        String id0 = service.scheduleSms(NOT_CLIENT, CLIENT, CLIENT, CLIENT, scheduleIn(5), "testCancelAllForClient0").id();
+        String id1 = service.scheduleSms(CLIENT, "b1", "k1", null, scheduleIn(5), "testCancelAllForClient1").id();
+        String id2 = service.scheduleSms(CLIENT, null, null, "t2", scheduleIn(5), "testCancelAllForClient2").id();
+        String id3 = service.scheduleSms(CLIENT, "b1", null, "t2", scheduleIn(5), "testCancelAllForClient3").id();
         
         service.cancelAllForClient(CLIENT);
        
@@ -206,17 +231,31 @@ class SmsSchedulerServiceTests {
     @Test
     void testGetStatusList() {
         
-        service.scheduleSms(NOT_CLIENT, null, null, scheduleIn(5), "testCancelAllForClient0").id();
-        service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelAllForClient1").id();
+        service.scheduleSms(NOT_CLIENT, null, null, null, scheduleIn(5), "testGetStatusList0").id();
+        service.scheduleSms(CLIENT, null, null, null, scheduleIn(5), "testGetStatusList1").id();
         assertEquals(2, service.getStatusList().size());
     }
 
     @Test
     void testGetStatusListByClient() {
         
-        service.scheduleSms(NOT_CLIENT, null, null, scheduleIn(5), "testCancelAllForTarget0").id();
-        service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelByClientKey1").id();
-        service.scheduleSms(CLIENT, null, null, scheduleIn(5), "testCancelByClientKey2").id();
+        service.scheduleSms(NOT_CLIENT, null, null, null, scheduleIn(5), "testGetStatusListByClient0").id();
+        service.scheduleSms(CLIENT, null, null, null, scheduleIn(5), "testGetStatusListByClient1").id();
+        service.scheduleSms(CLIENT, null, null, null, scheduleIn(5), "testGetStatusListByClient2").id();
+        
+        assertEquals(3, service.getStatusList().size());
+        assertEquals(2, service.getStatusList(CLIENT).size());
+    }
+
+    @Test
+    void testGetStatusListByBatch() {
+        
+        final String BATCH = "the-batch";
+        final String NO_BATCH = "not-" + BATCH;
+        
+        service.scheduleSms(NOT_CLIENT, BATCH, null, null, scheduleIn(5), "testGetStatusListByBatch0").id();
+        service.scheduleSms(CLIENT, BATCH, null, null, scheduleIn(5), "testGetStatusListByBatch1").id();
+        service.scheduleSms(CLIENT, NO_BATCH, null, null, scheduleIn(5), "testGetStatusListByBatch2").id();
         
         assertEquals(3, service.getStatusList().size());
         assertEquals(2, service.getStatusList(CLIENT).size());
@@ -228,9 +267,9 @@ class SmsSchedulerServiceTests {
         final String TARGET = "the-target";
         final String NO_TARGET = "not-target";
         
-        service.scheduleSms(NOT_CLIENT, TARGET, null, scheduleIn(5), "testCancelAllForTarget0").id();
-        service.scheduleSms(CLIENT, TARGET, null, scheduleIn(5), "testCancelAllForTarget1").id();
-        service.scheduleSms(CLIENT, NO_TARGET, null, scheduleIn(5), "testCancelAllForTarget2").id();
+        service.scheduleSms(NOT_CLIENT, null, null, TARGET, scheduleIn(5), "testGetStatusListByTarget0").id();
+        service.scheduleSms(CLIENT, null, null, TARGET, scheduleIn(5), "testGetStatusListByTarget1").id();
+        service.scheduleSms(CLIENT, null, null, NO_TARGET, scheduleIn(5), "testGetStatusListByTarget2").id();
         
         assertEquals(1, service.getStatusListByTarget(CLIENT, TARGET).size());
     }
@@ -241,9 +280,9 @@ class SmsSchedulerServiceTests {
         final String KEY = "cancel-key";
         final String NO_KEY = "not-key";
         
-        service.scheduleSms(NOT_CLIENT, null, KEY, scheduleIn(5), "testCancelAllForTarget0").id();
-        service.scheduleSms(CLIENT, null, KEY, scheduleIn(5), "testCancelByClientKey1").id();
-        service.scheduleSms(CLIENT, null, NO_KEY, scheduleIn(5), "testCancelByClientKey2").id();
+        service.scheduleSms(NOT_CLIENT, null, KEY, null, scheduleIn(5), "testCancelAllForTarget0").id();
+        service.scheduleSms(CLIENT, null, KEY, null, scheduleIn(5), "testCancelByClientKey1").id();
+        service.scheduleSms(CLIENT, null, NO_KEY, null, scheduleIn(5), "testCancelByClientKey2").id();
         
         assertEquals(1, service.getStatusListByClientKey(CLIENT, KEY).size());
     }

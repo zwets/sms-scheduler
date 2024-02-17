@@ -10,15 +10,16 @@ LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
 . "$LIB_DIR/settings.sh"
 
 # The functions in kafka-lib.sh will display this
-USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FILE]
+USAGE="[[[[[[[[[PUBFILE] CLIENT] BATCH] BIZKEY] TARGET] SCHEDULE] SENDER] RECIPIENT] FILE]
 
   Schedule an SMS through a Kafka event
 
   POSITIONAL PARAMS
    PUBFILE    Public key file to encrypt with [lib/keys/\${CLIENT}.pub]
    CLIENT     Client on whose behalf you are sending [$CLIENT]
-   TARGET     Client identifier for the recipient [encrock(\$RECIPIENT)]
+   BATCH      Batch identifier for this (fake batch) send [$BATCH]
    BIZKEY     Client identifier for this specific send [\${CLIENT}-\${RANDOM}]
+   TARGET     Client identifier for the recipient [encrock(\$RECIPIENT)]
    SCHEDULE   Sending schedule (see below) [+0]
    SENDER     Sender name or number [$SENDER]
    RECIPIENT  Destination number [$RECIPIENT]
@@ -35,10 +36,11 @@ USAGE="[[[[[[[[PUBFILE] CLIENT] TARGET] BIZKEY] SCHEDULE] SENDER] RECIPIENT] FIL
 . "$LIB_DIR/schedule-lib.sh"
 
 # Parse the optional arguments
-(( $# == 8 )) && PUBKEY="$1"    && shift || true
-(( $# == 7 )) && CLIENT="$1"    && shift || true
-(( $# == 6 )) && TARGET="$1"    && shift || true
-(( $# == 5 )) && BIZKEY="$1"    && shift || true
+(( $# == 9 )) && PUBKEY="$1"    && shift || true
+(( $# == 8 )) && CLIENT="$1"    && shift || true
+(( $# == 7 )) && BATCH="$1"     && shift || true
+(( $# == 6 )) && BIZKEY="$1"    && shift || true
+(( $# == 5 )) && TARGET="$1"    && shift || true
 (( $# == 4 )) && SCHEDULE="$1"  && shift || true
 (( $# == 3 )) && SENDER="$1"    && shift || true
 (( $# == 2 )) && RECIPIENT="$1" && shift || true
@@ -57,13 +59,19 @@ PAYLOAD="$(encrypted_sms "$PUBFILE" "$RECIPIENT" "$SENDER" "$FILE")" || err_exit
 dump_diags
 emit "PUBFILE   = $PUBFILE"
 emit "CLIENT    = $CLIENT"
-emit "TARGET    = $TARGET"
+emit "BATCH     = $BATCH"
 emit "BIZKEY    = $BIZKEY"
+emit "TARGET    = $TARGET"
 emit "SCHEDULE  = $SCHEDULE"
 emit "SENDER    = $SENDER"
 emit "RECIPIENT = $RECIPIENT"
 
 # Produce the message and pipe it onto the topic
-printf '{ "action": "schedule", "client": "%s", "target": "%s", "key": "%s", "schedule": "%s", "message": "%s" }\n' \
-        "$CLIENT" "$TARGET" "$BIZKEY" "$SCHEDULE" "$PAYLOAD" |
+printf '{ "action": "schedule", "client": "%s", %s%s%s%s"message": "%s" }\n' \
+        "$CLIENT" \
+        "${BATCH:+\"batch\": \"$BATCH\", }" \
+        "${BIZKEY:+\"key\": \"$BIZKEY\", }" \
+        "${TARGET:+\"target\": \"$TARGET\", }" \
+        "${SCHEDULE:+\"schedule\": \"$SCHEDULE\", }" \
+        "$PAYLOAD" |
 kcat_send

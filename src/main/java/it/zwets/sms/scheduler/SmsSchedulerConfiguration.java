@@ -122,8 +122,9 @@ public class SmsSchedulerConfiguration {
         // Variable names (set on the process instance)
 
         public static final String VAR_CLIENT_ID = "clientId";
-        public static final String VAR_TARGET_ID = "targetId";
+        public static final String VAR_BATCH_ID = "batchId";
         public static final String VAR_CLIENT_KEY = "clientKey";
+        public static final String VAR_TARGET_ID = "targetId";
         public static final String VAR_SCHEDULE = "schedule";
         public static final String VAR_PAYLOAD = "payload";
         

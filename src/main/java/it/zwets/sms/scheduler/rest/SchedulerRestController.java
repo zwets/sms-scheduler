@@ -47,7 +47,7 @@ public class SchedulerRestController {
     // SCHEDULE -----------------------------------------------------------------------------------
     
     /* Request from client; all fields except schedule and payload can be absent. */
-    private final record Request(String target, String key, String schedule, String payload) { }
+    private final record Request(String batch, String key, String target, String schedule, String payload) { }
 
     /**
      * POST a new scheduled SMS.
@@ -59,7 +59,7 @@ public class SchedulerRestController {
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public SmsStatus postClient(@PathVariable String clientId, @RequestBody Request req) {
         LOG.trace("REST POST /schedule/{}", clientId);
-        return theService.scheduleSms(clientId, req.target, req.key, req.schedule, req.payload);
+        return theService.scheduleSms(clientId, req.batch, req.key, req.target, req.schedule, req.payload);
     }
     
     // QUERY --------------------------------------------------------------------------------------
@@ -95,16 +95,16 @@ public class SchedulerRestController {
     }
     
     /**
-     * GET status list for all SMS scheduled for a target
+     * GET status list for all SMS scheduled in a batch
      * @param clientId path variable identifying the client (tenant)
-     * @param targetId the client-provided identifier of the target (recipient)
+     * @param batchId the client-provided identifier of the batch (recipient)
      * @return list of SMS status objects
      */
-    @GetMapping(path = "{clientId}/by-target/{targetId}")
+    @GetMapping(path = "{clientId}/by-batch/{batchId}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
-    public List<SmsStatus> getByTarget(@PathVariable String clientId, @PathVariable String targetId) {
-        LOG.trace("REST GET /schedule/{}/by-target/{}", clientId, targetId);
-        return theService.getStatusListByTarget(clientId, targetId);
+    public List<SmsStatus> getByBatch(@PathVariable String clientId, @PathVariable String batchId) {
+        LOG.trace("REST GET /schedule/{}/by-batch/{}", clientId, batchId);
+        return theService.getStatusListByBatch(clientId, batchId);
     }
     
     /**
@@ -121,6 +121,19 @@ public class SchedulerRestController {
         return theService.getStatusListByClientKey(clientId, clientKey);
     }
 
+    /**
+     * GET status list for all SMS scheduled for a target
+     * @param clientId path variable identifying the client (tenant)
+     * @param targetId the client-provided identifier of the target (recipient)
+     * @return list of SMS status objects
+     */
+    @GetMapping(path = "{clientId}/by-target/{targetId}")
+    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
+    public List<SmsStatus> getByTarget(@PathVariable String clientId, @PathVariable String targetId) {
+        LOG.trace("REST GET /schedule/{}/by-target/{}", clientId, targetId);
+        return theService.getStatusListByTarget(clientId, targetId);
+    }
+    
     // CANCEL -------------------------------------------------------------------------------------
     
     /**
@@ -153,15 +166,15 @@ public class SchedulerRestController {
     }
 
     /**
-     * DELETE (cancel) all scheduled SMS for a target
+     * DELETE (cancel) scheduled SMS by client-provided batch-id
      * @param clientId path variable identifying the client (tenant)
-     * @param targetId the client-provided identifier of the target (recipient)
+     * @param clientKey the client-provided identifier of the SMS
      */
-    @DeleteMapping(path = "{clientId}/by-target/{targetId}")
+    @DeleteMapping(path = "{clientId}/by-batch/{batchId}")
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
-    public void deleteByTarget(@PathVariable String clientId, @PathVariable String targetId) {
-        LOG.trace("REST DELETE /schedule/{}/by-target/{}", clientId, targetId);
-        theService.cancelAllForTarget(clientId, targetId);
+    public void deleteByBatch(@PathVariable String clientId, @PathVariable String batchId) {
+        LOG.trace("REST DELETE /schedule/{}/by-batch/{}", clientId, batchId);
+        theService.cancelBatch(clientId, batchId);
     }
 
     /**
@@ -174,6 +187,18 @@ public class SchedulerRestController {
     public void deleteByKey(@PathVariable String clientId, @PathVariable String clientKey) {
         LOG.trace("REST DELETE /schedule/{}/by-key/{}", clientId, clientKey);
         theService.cancelByClientKey(clientId, clientKey);
+    }
+
+    /**
+     * DELETE (cancel) all scheduled SMS for a target
+     * @param clientId path variable identifying the client (tenant)
+     * @param targetId the client-provided identifier of the target (recipient)
+     */
+    @DeleteMapping(path = "{clientId}/by-target/{targetId}")
+    @PreAuthorize("hasRole('users') && hasRole(#clientId)")
+    public void deleteByTarget(@PathVariable String clientId, @PathVariable String targetId) {
+        LOG.trace("REST DELETE /schedule/{}/by-target/{}", clientId, targetId);
+        theService.cancelAllForTarget(clientId, targetId);
     }
 
     // Helpers

@@ -176,6 +176,62 @@ class SchedulerRestControllerTests {
     }
 
     @Test
+    public void testOmitPatchParamDoesNotCancelAll() {
+
+        ResponseEntity<String> response;
+        SmsStatus ss1, ss2;
+        String id1, id2;
+        
+        response = rest.POST("/schedule/test", simpleRequest("batch1", null, null, 1000));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ss1 = deserializeStatus(response);
+        id1 = ss1.id();
+
+        response = rest.POST("/schedule/test", simpleRequest(null, null, null, 1000));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ss2 = deserializeStatus(response);
+        id2 = ss2.id();
+        
+        response = rest.GET("/schedule/test/by-id/" + id1);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ss1 = deserializeStatus(response);
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, ss1.status());
+
+        response = rest.GET("/schedule/test/by-id/" + id2);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ss2 = deserializeStatus(response);
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, ss2.status());
+
+        response = rest.DELETE("/schedule/test/by-batch/");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+
+        response = rest.DELETE("/schedule/test/by-id/");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+
+        response = rest.DELETE("/schedule/test/by-key/");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+
+        response = rest.DELETE("/schedule/test/by-target/");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+
+        response = rest.DELETE("/schedule/test/by-batch/batch1");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        
+        response = rest.GET("/schedule/test/by-id/" + id1);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ss1 = deserializeStatus(response);
+        assertEquals(Constants.SMS_STATUS_CANCELED, ss1.status());
+
+        response = rest.GET("/schedule/test/by-id/" + id2);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ss2 = deserializeStatus(response);
+        assertEquals(Constants.SMS_STATUS_SCHEDULED, ss2.status());
+
+        schedulerService.deleteInstance(id1);
+        schedulerService.deleteInstance(id2);
+    }
+
+    @Test
     public void testAlreadyExpired() {
         
         ResponseEntity<String> response = rest.POST("/schedule/test", simpleRequest(-100));
@@ -263,7 +319,7 @@ class SchedulerRestControllerTests {
         ResponseEntity<String> response = rest.PUT("/block/test/" + TARGET, "");
         assertEquals(HttpStatus.OK, response.getStatusCode());
         
-        response = rest.POST("/schedule/test", simpleRequest(TARGET, "key", 0));
+        response = rest.POST("/schedule/test", simpleRequest("batch", "key", TARGET, 0));
         assertEquals(HttpStatus.OK, response.getStatusCode());
         
         SmsStatus s = deserializeStatus(response);
@@ -366,8 +422,9 @@ class SchedulerRestControllerTests {
         return new SmsStatus(
                 node.get("id").asText(null),
                 node.get("client").asText(null),
-                node.get("target").asText(null),
+                node.get("batch").asText(null),
                 node.get("key").asText(null),
+                node.get("target").asText(null),
                 node.get("status").asText(null),
                 node.get("due").asText(null),
                 node.get("deadline").asText(null),
@@ -399,24 +456,25 @@ class SchedulerRestControllerTests {
         // Helpers - serialise to JSON
 
     private String simpleRequest(int seconds) {
-        return simpleRequest(null, null, seconds);
+        return simpleRequest(null, null, null, seconds);
     }
     
-    private String simpleRequest(String target, String key, int seconds) {
+    private String simpleRequest(String batch, String key, String target, int seconds) {
         long due = Instant.now().getEpochSecond() + seconds;
         String schedule = new Scheduler(new Slot[] { new Slot(due, due+5) }).toString();
-        return smsJson(target, key, schedule, 
-                "DummyRequest for target:%s key:%s in %ds)"
-                .formatted(StringUtils.defaultString(target), StringUtils.defaultString(key), seconds));
+        return smsJson(batch, key, target, schedule, 
+                "DummyRequest for B:K:T %s:%s:%s in %ds)"
+                .formatted(StringUtils.defaultString(batch), StringUtils.defaultString(key), StringUtils.defaultString(target), seconds));
     }
     
-    private String smsJson(String target, String key, String schedule, String payload) {
+    private String smsJson(String batch, String key, String target, String schedule, String payload) {
 
         String sep = "";
         StringBuilder b = new StringBuilder();
         b.append("{ ");
-        if (target != null) { b.append(sep).append(quotedField("target", target)); sep = ", "; }
+        if (batch != null) { b.append(sep).append(quotedField("batch", batch)); sep = ", "; }
         if (key != null) { b.append(sep).append(quotedField("key", key)); sep = ", "; }
+        if (target != null) { b.append(sep).append(quotedField("target", target)); sep = ", "; }
         if (schedule != null) { b.append(sep).append(quotedField("schedule", schedule)); sep = ", "; }
         if (payload != null) { b.append(sep).append(quotedField("payload", payload)); sep = ", "; }
         b.append(" }");

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+export LC_ALL="C"
+set -euo pipefail
+
+LIB_DIR="$(dirname "$(realpath "$0")")/../lib"
+. "$LIB_DIR/settings.sh"
+
+USAGE="CLIENT BATCH
+
+  Remove all scheduled SMS from BATCH by CLIENT
+
+  POSITIONAL PARAMS
+   CLIENT    Unique client ID
+   BATCH     Batch ID assigned by client"
+
+. "$LIB_DIR/rest-lib.sh"
+
+(($# == 2)) || usage_exit 1
+
+rest_DELETE /schedule/$1/by-batch/$2
