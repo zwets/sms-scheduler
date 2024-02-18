@@ -13,6 +13,9 @@ import org.flowable.engine.runtime.Execution;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +33,7 @@ public class SmsSchedulerService {
 	
 	/** The DTO for reporting status */
     public final record SmsStatus(
-            String id, String client, String batch, String key, String target, String status, String due, String deadline, String started, String ended, int retries) { }
+            String id, String client, String batch, String key, String target, String status, String due, String deadline, String started, String ended, int retries, String user) { }
 
     public SmsSchedulerService(ProcessEngine processEngine, DateHelper dateHelper) {
         this.runtimeService = processEngine.getRuntimeService();
@@ -58,16 +61,19 @@ public class SmsSchedulerService {
 		
 		Map<String,Object> vars = new HashMap<String,Object>();
 		
+        String userId = getAuthenticatedUser();
+        vars.put(Constants.VAR_USER_ID, userId);
+		
 		vars.put(Constants.VAR_CLIENT_ID, clientId);
         vars.put(Constants.VAR_BATCH_ID, batchId);
         vars.put(Constants.VAR_CLIENT_KEY, clientKey);
 		vars.put(Constants.VAR_TARGET_ID, targetId);
 		vars.put(Constants.VAR_SCHEDULE, schedule);
 		vars.put(Constants.VAR_PAYLOAD, payload);
-
+        
 		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.SMS_SCHEDULER_PROCESS_NAME, vars);
 		
-		return new SmsStatus(pi.getId(), clientId, batchId, clientKey, targetId, Constants.SMS_STATUS_NEW, null, null, dateHelper.format(pi.getStartTime()), null, 0);
+		return new SmsStatus(pi.getId(), clientId, batchId, clientKey, targetId, Constants.SMS_STATUS_NEW, null, null, dateHelper.format(pi.getStartTime()), null, 0, userId);
     }
 	
 	// Query --------------------------------------------------------------------------------------
@@ -284,6 +290,18 @@ public class SmsSchedulerService {
                 (String) pvs.getOrDefault(Constants.VAR_SMS_DEADLINE, null),
                 dateHelper.format(hpi.getStartTime()),
                 dateHelper.format(hpi.getEndTime()),
-                (int) pvs.getOrDefault(Constants.VAR_SMS_RETRIES, -1));
+                (int) pvs.getOrDefault(Constants.VAR_SMS_RETRIES, -1),
+                (String) pvs.getOrDefault(Constants.VAR_USER_ID, null));
+    }
+    
+    private String getAuthenticatedUser() {
+        SecurityContext ctx = SecurityContextHolder.getContext();
+        if (ctx != null) {
+            Authentication auth = ctx.getAuthentication();
+            if (auth != null) {
+                return auth.getName();
+            }
+        }
+        return null;
     }
 }

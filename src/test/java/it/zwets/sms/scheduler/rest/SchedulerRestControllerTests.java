@@ -47,6 +47,9 @@ import it.zwets.sms.scheduler.util.Slot;
 class SchedulerRestControllerTests {
 
     private static final Logger LOG = LoggerFactory.getLogger(SchedulerRestControllerTests.class);
+    
+    private static String USERID = "tester";
+    private static String PASSWD = "test";
 
     @LocalServerPort
     int port;
@@ -64,7 +67,7 @@ class SchedulerRestControllerTests {
 
     @BeforeAll
     public void beforeAll() {
-        rest = new RestTestHelper(iamService, "http://localhost", port, "tester", "test");
+        rest = new RestTestHelper(iamService, "http://localhost", port, USERID, PASSWD);
         rest.createDefaultAccount(IamService.USERS_GROUP, IamService.TEST_CLIENT);
     }
 
@@ -127,6 +130,7 @@ class SchedulerRestControllerTests {
         assertNotNull(s.started());
         assertNull(s.ended());
         assertEquals(0, s.retries());
+        assertEquals(USERID, s.user());
 
         response = rest.GET("/schedule/test/by-id/" + id);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -142,6 +146,7 @@ class SchedulerRestControllerTests {
         assertEquals(s.started(), r.started());
         assertEquals(s.ended(), r.ended());
         assertEquals(s.retries(), r.retries());
+        assertEquals(s.user(), r.user());
     
         response = rest.DELETE("/schedule/test/by-id/" + id);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -161,6 +166,7 @@ class SchedulerRestControllerTests {
         assertEquals(s.key(), r.key());
         assertEquals(s.started(), r.started());
         assertEquals(s.retries(), r.retries());
+        assertEquals(s.user(), r.user());
         
         response = rest.POST("/schedule/test", simpleRequest(10));
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -430,7 +436,8 @@ class SchedulerRestControllerTests {
                 node.get("deadline").asText(null),
                 node.get("started").asText(null),
                 node.get("ended").asText(null),
-                node.get("retries").asInt(-2));
+                node.get("retries").asInt(-2),
+                node.get("user").asText(null));
     }
     
     private SmsStatus deserializeStatus(ResponseEntity<String> entity) {

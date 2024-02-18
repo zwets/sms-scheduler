@@ -128,6 +128,8 @@ public class SmsSchedulerConfiguration {
         public static final String VAR_SCHEDULE = "schedule";
         public static final String VAR_PAYLOAD = "payload";
         
+        public static final String VAR_USER_ID = "userId";
+        
         public static final String VAR_SMS_DUETIME = "smsDueTime";
         public static final String VAR_SMS_DEADLINE = "smsDeadline";
         public static final String VAR_SMS_STATUS = "smsStatus";
