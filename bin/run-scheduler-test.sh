@@ -5,7 +5,7 @@ set -euo pipefail
 
 cd "$(dirname "$(realpath "$0")")/.."
 
-VERSION=1.0.2
+VERSION=1.0.3-SNAPSHOT
 JAR="target/sms-scheduler-${VERSION}.war"
 
 exec java -jar "$JAR" --spring.profiles.active='test' "$@"
