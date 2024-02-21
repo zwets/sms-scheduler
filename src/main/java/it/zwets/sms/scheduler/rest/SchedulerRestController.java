@@ -59,7 +59,12 @@ public class SchedulerRestController {
     @PreAuthorize("hasRole('users') && hasRole(#clientId)")
     public SmsStatus postClient(@PathVariable String clientId, @RequestBody Request req) {
         LOG.trace("REST POST /schedule/{}", clientId);
-        return theService.scheduleSms(clientId, req.batch, req.key, req.target, req.schedule, req.payload);
+        try {
+            return theService.scheduleSms(clientId, req.batch, req.key, req.target, req.schedule, req.payload);
+        }
+        catch(Throwable t) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, t.getMessage());
+        }
     }
     
     // QUERY --------------------------------------------------------------------------------------
