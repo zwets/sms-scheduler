@@ -17,4 +17,4 @@ The schedule-sms scripts need to encrypt the payload for the backend, so they
 need the backend's public key for each client you will be testing with.
 
 You can pass these on the command-line, but it will be much more convenient to
-drop them in the 'lib/keys' directory.  See the README.txt there.
+create a directory lib/keys and drop them there.
