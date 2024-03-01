@@ -8,12 +8,10 @@ import java.util.Date;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import it.zwets.sms.scheduler.SmsSchedulerConfiguration;
-
 /**
  * Helps with the parsing, formattting and conversion of dates.
  * 
- * {@link SmsSchedulerConfiguration} produces a dateHelper bean set
+ * The application configuration produces a dateHelper bean set
  * for the (configurable) application's time zone.  This bean will
  * format datetimes as ISO-8601 instants with the given offset.
  * 
