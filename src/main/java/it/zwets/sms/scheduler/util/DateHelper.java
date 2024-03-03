@@ -68,7 +68,7 @@ public class DateHelper {
 	 * @param iso the ISO string
 	 * @return the Date or null if iso is null
 	 */
-	public Date parse(String iso) {
+	public Date parseDate(String iso) {
 	    return iso == null ? null : Date.from(Instant.from(formatter.parse(iso)));
 	}
 }

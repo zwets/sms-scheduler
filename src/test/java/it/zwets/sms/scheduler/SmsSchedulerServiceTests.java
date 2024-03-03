@@ -1,9 +1,14 @@
 package it.zwets.sms.scheduler;
 
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_CANCELED;
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_ENROUTE;
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_NEW;
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_SCHEDULED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 
@@ -14,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
 import it.zwets.sms.scheduler.util.Scheduler;
 import it.zwets.sms.scheduler.util.Slot;
@@ -62,7 +66,7 @@ class SmsSchedulerServiceTests {
         String id = s.id();
         assertNotNull(id);
         
-        assertEquals(Constants.SMS_STATUS_NEW, s.status());
+        assertTrue(SMS_STATUS_NEW.equals(s.status()) || SMS_STATUS_SCHEDULED.equals(s.status()));
         assertEquals(CLIENT, s.client());
         assertEquals("batch", s.batch());
         assertEquals("key", s.key());
@@ -74,7 +78,7 @@ class SmsSchedulerServiceTests {
         SmsStatus r = service.getSmsStatus(id);
         assertNotNull(r);
         
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, r.status());
+        assertEquals(SMS_STATUS_SCHEDULED, r.status());
         assertEquals(s.id(), r.id());
         assertEquals(s.client(), r.client());
         assertEquals(s.batch(), r.batch());
@@ -94,7 +98,7 @@ class SmsSchedulerServiceTests {
         
         String id = s.id();
         assertNotNull(id);
-        assertEquals("NEW", s.status());
+        assertTrue(SMS_STATUS_NEW.equals(s.status()) || SMS_STATUS_SCHEDULED.equals(s.status()));
         
         service.deleteInstance(id);
         assertNull(service.getSmsStatus(id));
@@ -111,7 +115,7 @@ class SmsSchedulerServiceTests {
 
         SmsStatus r = service.getSmsStatus(id);
         assertNotNull(r);
-        assertEquals(Constants.SMS_STATUS_ENROUTE, r.status());
+        assertEquals(SMS_STATUS_ENROUTE, r.status());
 
         service.deleteInstance(id);
         assertNull(service.getSmsStatus(id));
@@ -126,13 +130,13 @@ class SmsSchedulerServiceTests {
 
         s = service.getSmsStatus(id);
         assertNotNull(s);
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, s.status());
+        assertEquals(SMS_STATUS_SCHEDULED, s.status());
         
         waitForAsync(2);
 
         s = service.getSmsStatus(id);
         assertNotNull(s);
-        assertEquals(Constants.SMS_STATUS_ENROUTE, s.status());
+        assertEquals(SMS_STATUS_ENROUTE, s.status());
 
         service.deleteInstance(id);
         assertNull(service.getSmsStatus(id));
@@ -149,7 +153,7 @@ class SmsSchedulerServiceTests {
        
         s = service.getSmsStatus(id);
         assertNotNull(s);
-        assertEquals(Constants.SMS_STATUS_CANCELED, s.status());
+        assertEquals(SMS_STATUS_CANCELED, s.status());
 
         service.deleteInstance(id);
         assertNull(service.getSmsStatus(id));
@@ -168,10 +172,10 @@ class SmsSchedulerServiceTests {
         
         service.cancelBatch(CLIENT, BATCH);
        
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
-        assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id3).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
+        assertEquals(SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id3).status());
     }
 
     @Test
@@ -187,10 +191,10 @@ class SmsSchedulerServiceTests {
         
         service.cancelByClientKey(CLIENT, KEY);
        
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
-        assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id3).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
+        assertEquals(SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id3).status());
     }
 
     @Test
@@ -206,10 +210,10 @@ class SmsSchedulerServiceTests {
         
         service.cancelAllForTarget(CLIENT, TARGET);
        
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
-        assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id3).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
+        assertEquals(SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id2).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id3).status());
     }
 
     @Test
@@ -222,10 +226,10 @@ class SmsSchedulerServiceTests {
         
         service.cancelAllForClient(CLIENT);
        
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
-        assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
-        assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id2).status());
-        assertEquals(Constants.SMS_STATUS_CANCELED, service.getSmsStatus(id3).status());
+        assertEquals(SMS_STATUS_SCHEDULED, service.getSmsStatus(id0).status());
+        assertEquals(SMS_STATUS_CANCELED, service.getSmsStatus(id1).status());
+        assertEquals(SMS_STATUS_CANCELED, service.getSmsStatus(id2).status());
+        assertEquals(SMS_STATUS_CANCELED, service.getSmsStatus(id3).status());
     }
 
     @Test

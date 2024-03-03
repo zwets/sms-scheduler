@@ -72,8 +72,23 @@ public class SmsSchedulerService {
 		vars.put(Constants.VAR_PAYLOAD, payload);
         
 		ProcessInstance pi = runtimeService.startProcessInstanceByKey(Constants.SMS_SCHEDULER_PROCESS_NAME, vars);
-		
-		return new SmsStatus(pi.getId(), clientId, batchId, clientKey, targetId, Constants.SMS_STATUS_NEW, null, null, dateHelper.format(pi.getStartTime()), null, 0, userId);
+
+		// We are in a transaction so process variables not yet committed but we should be able to read,
+		// or else we put in the defaults from incoming and status "NEW".g
+        vars = pi.getProcessVariables();
+        return new SmsStatus(
+                pi.getId(),
+                (String) vars.getOrDefault(Constants.VAR_CLIENT_ID, clientId),
+                (String) vars.getOrDefault(Constants.VAR_BATCH_ID, batchId),
+                (String) vars.getOrDefault(Constants.VAR_CLIENT_KEY, clientKey),
+                (String) vars.getOrDefault(Constants.VAR_TARGET_ID, targetId),
+                (String) vars.getOrDefault(Constants.VAR_SMS_STATUS, Constants.SMS_STATUS_NEW),
+                dateHelper.format((Instant) vars.getOrDefault(Constants.VAR_SMS_DUETIME, null)),
+                (String) vars.getOrDefault(Constants.VAR_SMS_DEADLINE, null),
+                dateHelper.format(pi.getStartTime()),
+                null, // pi has no end time
+                (int) vars.getOrDefault(Constants.VAR_SMS_RETRIES, -1),
+                (String) vars.getOrDefault(Constants.VAR_USER_ID, null));
     }
 	
 	// Query --------------------------------------------------------------------------------------

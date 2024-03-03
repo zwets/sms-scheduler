@@ -19,7 +19,7 @@ class DateHelperTests {
         DateHelper dh = new DateHelper(ZoneOffset.of("+03:00"));
         
         String utcDate = "2023-10-28T00:23:30Z";
-        Date parsedUtc = dh.parse(utcDate);
+        Date parsedUtc = dh.parseDate(utcDate);
         LOG.info("parsedUtc: {}", parsedUtc);
         String formatted = dh.format(parsedUtc);
         
@@ -29,6 +29,6 @@ class DateHelperTests {
     @Test
     void testFailsWithoutZone() {
         DateHelper dh = new DateHelper(ZoneOffset.of("+03:00"));
-        assertThrows(DateTimeParseException.class, () -> dh.parse("2023-10-28T03:00"));
+        assertThrows(DateTimeParseException.class, () -> dh.parseDate("2023-10-28T03:00"));
     }
 }

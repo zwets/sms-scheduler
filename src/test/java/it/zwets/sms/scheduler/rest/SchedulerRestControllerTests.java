@@ -1,5 +1,11 @@
 package it.zwets.sms.scheduler.rest;
 
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_BLOCKED;
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_CANCELED;
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_ENROUTE;
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_EXPIRED;
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_NEW;
+import static it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants.SMS_STATUS_SCHEDULED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -34,7 +40,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import it.zwets.sms.scheduler.SmsSchedulerConfiguration.Constants;
 import it.zwets.sms.scheduler.SmsSchedulerService;
 import it.zwets.sms.scheduler.SmsSchedulerService.SmsStatus;
 import it.zwets.sms.scheduler.TargetBlockerService;
@@ -126,7 +131,7 @@ class SchedulerRestControllerTests {
         assertEquals("test", s.client());
         assertNull(s.target());
         assertNull(s.key());
-        assertEquals("NEW", s.status());
+        assertTrue(SMS_STATUS_NEW.equals(s.status()) || SMS_STATUS_SCHEDULED.equals(s.status()));
         assertNotNull(s.started());
         assertNull(s.ended());
         assertEquals(0, s.retries());
@@ -138,7 +143,7 @@ class SchedulerRestControllerTests {
         SmsStatus r = deserializeStatus(response);
         assertNotNull(r);
         
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, r.status());
+        assertEquals(SMS_STATUS_SCHEDULED, r.status());
         assertEquals(s.id(), r.id());
         assertEquals(s.client(), r.client());
         assertEquals(s.target(), r.target());
@@ -157,7 +162,7 @@ class SchedulerRestControllerTests {
         r = deserializeStatus(response);
         assertNotNull(r);
         
-        assertEquals(Constants.SMS_STATUS_CANCELED, r.status());
+        assertEquals(SMS_STATUS_CANCELED, r.status());
         assertNotNull(r.ended());
 
         assertEquals(s.id(), r.id());
@@ -201,12 +206,12 @@ class SchedulerRestControllerTests {
         response = rest.GET("/schedule/test/by-id/" + id1);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         ss1 = deserializeStatus(response);
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, ss1.status());
+        assertEquals(SMS_STATUS_SCHEDULED, ss1.status());
 
         response = rest.GET("/schedule/test/by-id/" + id2);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         ss2 = deserializeStatus(response);
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, ss2.status());
+        assertEquals(SMS_STATUS_SCHEDULED, ss2.status());
 
         response = rest.DELETE("/schedule/test/by-batch/");
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
@@ -226,12 +231,12 @@ class SchedulerRestControllerTests {
         response = rest.GET("/schedule/test/by-id/" + id1);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         ss1 = deserializeStatus(response);
-        assertEquals(Constants.SMS_STATUS_CANCELED, ss1.status());
+        assertEquals(SMS_STATUS_CANCELED, ss1.status());
 
         response = rest.GET("/schedule/test/by-id/" + id2);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         ss2 = deserializeStatus(response);
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, ss2.status());
+        assertEquals(SMS_STATUS_SCHEDULED, ss2.status());
 
         schedulerService.deleteInstance(id1);
         schedulerService.deleteInstance(id2);
@@ -245,7 +250,7 @@ class SchedulerRestControllerTests {
         
         SmsStatus s = deserializeStatus(response);
         String id = s.id();
-        assertEquals(Constants.SMS_STATUS_NEW, s.status());
+        assertTrue(SMS_STATUS_NEW.equals(s.status()) || SMS_STATUS_EXPIRED.equals(s.status()));
         assertNotNull(s.started());
         assertNull(s.ended());
 
@@ -253,7 +258,7 @@ class SchedulerRestControllerTests {
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         SmsStatus r = deserializeStatus(response);
-        assertEquals(Constants.SMS_STATUS_EXPIRED, r.status());
+        assertEquals(SMS_STATUS_EXPIRED, r.status());
         assertNotNull(r.ended());
     
         response = rest.DELETE("/schedule/test/by-id/" + id);
@@ -263,7 +268,7 @@ class SchedulerRestControllerTests {
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         r = deserializeStatus(response);
-        assertEquals(Constants.SMS_STATUS_EXPIRED, r.status());
+        assertEquals(SMS_STATUS_EXPIRED, r.status());
         
         schedulerService.deleteInstance(id);
     }
@@ -335,7 +340,7 @@ class SchedulerRestControllerTests {
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         SmsStatus r = deserializeStatus(response);
-        assertEquals(Constants.SMS_STATUS_BLOCKED, r.status());
+        assertEquals(SMS_STATUS_BLOCKED, r.status());
         assertNotNull(r.ended());
     
         response = rest.DELETE("/block/test/" + TARGET);
@@ -360,7 +365,7 @@ class SchedulerRestControllerTests {
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         s = deserializeStatus(response);
-        assertEquals(Constants.SMS_STATUS_ENROUTE, s.status());
+        assertEquals(SMS_STATUS_ENROUTE, s.status());
         assertNull(s.ended());
 
         schedulerService.deleteInstance(id);
@@ -376,12 +381,12 @@ class SchedulerRestControllerTests {
         String id = s.id();
         
         s = deserializeStatus(rest.GET("/schedule/test/by-id/" + id));
-        assertEquals(Constants.SMS_STATUS_SCHEDULED, s.status());
+        assertEquals(SMS_STATUS_SCHEDULED, s.status());
         
         waitForAsync(2);
 
         s = deserializeStatus(rest.GET("/schedule/test/by-id/" + id));
-        assertEquals(Constants.SMS_STATUS_ENROUTE, s.status());
+        assertEquals(SMS_STATUS_ENROUTE, s.status());
         assertNull(s.ended());
 
         schedulerService.deleteInstance(id);
@@ -402,7 +407,7 @@ class SchedulerRestControllerTests {
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         s = deserializeStatus(response);
-        assertEquals(Constants.SMS_STATUS_ENROUTE, s.status());
+        assertEquals(SMS_STATUS_ENROUTE, s.status());
         assertNotNull(s.ended());
 
         schedulerService.deleteInstance(id);
