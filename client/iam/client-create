@@ -14,4 +14,4 @@ USAGE="CID
 
 (($# == 1)) || usage_exit
 
-echo "$1" | rest_POST /iam/clients
+printf "$1" | rest_POST /iam/clients

@@ -134,9 +134,9 @@ public class IamRestController {
             LOG.warn("REST POST accounts/{}/password: account not found", id);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: %s".formatted(id));
         }
-
+        
         LOG.debug("REST POST accounts/{}/password: updating password", id);
-        iamService.updatePassword(id, password);
+        iamService.updatePassword(id, StringUtils.strip(password));
     }
 
     @DeleteMapping(path = "accounts/{id}")
@@ -184,7 +184,9 @@ public class IamRestController {
     public void postAccountInRole(@PathVariable String gid, @RequestBody String uid) {
         LOG.trace("REST POST roles/{}", gid);
         
-	if (!iamService.isGroup(Flavour.ROLE, gid)) {
+        uid = StringUtils.strip(uid);
+        
+        if (!iamService.isGroup(Flavour.ROLE, gid)) {
             LOG.warn("REST POST roles/{}: group not found", gid);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found: %s".formatted(gid));
         }
@@ -193,7 +195,7 @@ public class IamRestController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown account: %s".formatted(uid));
         }
         
-	LOG.debug("REST POST roles/{}: adding member: {}", gid, uid);
+        LOG.debug("REST POST roles/{}: adding member: {}", gid, uid);
         iamService.addAccountToGroup(uid, gid);
     }
 
@@ -232,7 +234,9 @@ public class IamRestController {
     @PreAuthorize("hasRole('admins')")
     public void postClient(@RequestBody String gid) {
         LOG.trace("REST POST clients");
-       
+
+        gid = StringUtils.strip(gid);
+        
         if (StringUtils.isBlank(gid)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Client ID must not be blank");
         }
@@ -268,6 +272,8 @@ public class IamRestController {
     @PreAuthorize("hasRole('admins')")
     public void postAccountInClient(@PathVariable String gid, @RequestBody String uid) {
         LOG.trace("REST POST clients/{}", gid);
+        
+        uid = StringUtils.strip(uid);
        
         if (!iamService.isGroup(Flavour.CLIENT, gid)) {
             LOG.warn("REST POST clients/{}: group not found", gid);
