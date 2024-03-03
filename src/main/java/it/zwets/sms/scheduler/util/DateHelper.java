@@ -1,5 +1,7 @@
 package it.zwets.sms.scheduler.util;
 
+import static java.time.temporal.ChronoUnit.SECONDS;
+
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -49,7 +51,7 @@ public class DateHelper {
      * @return null or ISO 8601 string with offset
      */
     public String format(Instant t) {
-        return t == null ? null : formatter.format(t);
+        return t == null ? null : formatter.format(t.truncatedTo(SECONDS));
     }
     
 	/**
@@ -58,7 +60,7 @@ public class DateHelper {
 	 * @return null or ISO 8601 string with offset
 	 */
 	public String format(Date d) {
-	    return d == null ? null : formatter.format(d.toInstant());
+	    return d == null ? null : formatter.format(d.toInstant().truncatedTo(SECONDS));
 	}
 	
 	/**
