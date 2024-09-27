@@ -231,7 +231,7 @@ Create a group for each client (and optionally add yourself to them)
         ./client-add-member $CLIENT $USER
     done
 
-Create more user accounts (**note: you must add them to 'users' at least)
+Create more user accounts (**note: you must add them to 'users' at least**)
 
     for ACCT in acct1 acct2 ...; do
         ./account-create acct1 FULLNAME EMAIL PASSWORD users
