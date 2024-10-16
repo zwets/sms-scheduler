@@ -1,7 +1,8 @@
-/*.tar
+/backups
 /config
 /data
 /target
 /.classpath
 /.project
 /.settings
+/sms-scheduler.jar
