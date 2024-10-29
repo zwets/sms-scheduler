@@ -5,7 +5,7 @@ Requires=network.target kafka.service
 After=kafka.service sms-gateway.service
 
 [Service]
-Type=simple
+Type=exec
 User=smes
 Group=smes
 WorkingDirectory=/opt/sms-scheduler
