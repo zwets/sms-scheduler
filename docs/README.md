@@ -6,7 +6,6 @@ For an overview of the SMS Scheduler, see the top-level [README](../README.md).
 ## Development
 
 @TODO@ describe setting up dev environment (including BPMN editor)
-@TODO@ include diagrams for scheduler and blocker processes 
 
 #### Configuration
 
@@ -15,28 +14,35 @@ has `src/test/resources/application-dev.properties` for configuration.
 
 #### Building & unit test
 
-A `mvn package` should do the trick.
+The usual `mvn package` builds and performs unit tests.  See [Testing](#testing)
+below.
+
+#### Process
+
+This diagram shows the flow of SMS through the process with end states:
+
+![BPMN diagram for SMS Scheduler](bpmn-process.png)
 
 
 ## Interfacing
 
 #### REST API
 
-@TODO@
+See the (JavaDoc of the) definitions in the `scheduler/rest` source directory.
 
 #### Messages
 
-Messages on the Kafka topic `schedule-sms` are defined in `eventregistry`
+Messages on the Kafka topic `schedule-sms` are defined in the `eventregistry`
 directory under `src/main/resources`.  Here for reference:
 
 ```json
 { 
     "action": "schedule",
-    "client": the ID of the client (tenant), e.g. "test"
-    "target": opaque ID for the recipient, assigned by the client
-    "key": client-defined ID to identify this request (or a group)
-    "schedule": slots in which the message may be forwarded
-    "message": the base64 encoded payload
+    "client": "",   // the ID of the client (tenant), e.g. "test"
+    "target": "",   // opaque ID for the recipient, assigned by the client
+    "key": "",      // client-defined ID to identify this request (or a group)
+    "schedule": ""  // slots in which the message may be forwarded
+    "message": ""   // the base64 encoded payload
 }
 ```
 
@@ -58,7 +64,7 @@ PWD/config.
 
 The default active profile set in `application.properties` is `dev`, which
 is not in the JAR hence you must activate either the `test` or `prod` profile
-when running the application.
+when running the application outside the `dev` environment.
 
 
 ## Testing
