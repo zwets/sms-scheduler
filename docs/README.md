@@ -184,28 +184,30 @@ To see and follow the logging output
 #### Set up the on-machine client
 
 Before exposing the service to public internet, we need to remove the default
-`admin:test` account.  This is done with a call to the admin REST interface,
-which most conveniently is done with the scripts in the `client` directory.
+`admin:test` account.  This is done with a call to the admin REST interface.
 
-Install the client in your home on the deployment machine (my convention is
-to clone repositories under `~/src` but any location will do):
+We do this with the scripts in the `client` directory in this repo.
+
+Clone the repo on the deployment machine (my convention is under `~/src` but
+any location will do):
 
     # As your own user (not root)
-    mkdir ~/src
-    git clone -C ~/src https://github.com/zwets/sms-scheduler
+    mkdir -p ~/src && cd ~/src &&
+    git clone https://github.com/zwets/sms-scheduler
 
 Create the defaults file:
 
-    cd ~/src/sms-scheduler/client/lib
+    cd sms-scheduler/client/lib &&
     cp defaults.example defaults
 
     # Edit: defaults
     #keep the default user (admin) and password (test) for now
+    #change the DEFAULT_BASEURL to have port 8082 (default server.port application-prod.properties)
 
 Check that the REST interface works
 
     cd ~/src/sms-scheduler/client/iam
-    ./iam/account-list   # shows just the 'admin' account
+    ./account-list   # shows just the 'admin' account
 
 Create an admin account for yourself
 
