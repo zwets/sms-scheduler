@@ -10,13 +10,13 @@
    </parent>
    <groupId>it.zwets</groupId>
    <artifactId>sms-scheduler</artifactId>
-   <version>1.1.4</version>
+   <version>1.2.0</version>
    <packaging>war</packaging>
    <name>SMS Scheduler</name>
    <description>Secure SMS Scheduler based on Flowable</description>
    <properties>
       <java.version>21</java.version>
-      <flowable.version>7.1.0</flowable.version>
+      <flowable.version>7.2.0</flowable.version>
    </properties>
    <dependencies>
       <dependency>

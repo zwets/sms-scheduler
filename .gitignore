@@ -6,3 +6,4 @@
 /.project
 /.settings
 /sms-scheduler.jar
+/sms-scheduler-*.war
