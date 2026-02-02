@@ -86,15 +86,35 @@ public class TriageDelegate implements JavaDelegate {
                     deadlineInstant = deadlineInstant.plusSeconds(jitter);
                 }
 
-                LOG.info("Scheduling new request: {}:{}:{}:{}:{}",
+                LOG.info("Scheduling new request at {}: {}:{}:{}:{}", smsDueTime,
                         StringUtils.substringBefore(execution.getProcessInstanceId(),'-'),
-                        clientId, targetId, clientKey, smsDueTime);
+                        clientId, targetId, clientKey);
             }
             else {
                 LOG.warn("Request schedule expired on arrival, not scheduling a send");
             }
         }
-        else {
+        else { // this is a retry after a message has gone through the process
+
+            // The incoming message may have status EXPIRED, FAILED or INVALID, and we
+            // retry in all cases, for the following reasons:
+            //  - FAILED means gateway or SMSC failed to send an otherwise good message,
+            //    so obviously we retry (if there is a next slot)
+            //  - EXPIRED means either Gateway received the request past its deadline
+            //    or the SMSC reported it expired, so we retry if there's next slot
+            //  - INVALID would mean that Gateway or SMSC rejected the message for some
+            //    reason (so we shouldn't retry).  However, if we get INVALID then this
+            //    must be from the RECV wait state, because if the SEND wait state ended
+            //    in INVALID the process would have ended in INVALID (see BPMN diagram).
+            //    This means that the INVALID cannot come from Gateway itself (and mean:
+            //    invalid forever), nor from SMSC initial look at the message.  It must
+            //    be a translation of a later SMSC notification, almost certainly REJECT
+            //    (prior to 1.3.0 Gateway also translated UNDELIV to INVALID; we changed
+            //    that to FAILED).  The INVALID then almost certainly is a REJECT from
+            //    SMSC, but we retry (note: it did not reject the first time around).
+            //    All this might be easier if SMSCs would stick to standard SMPP error
+            //    codes: https://smpp.org/smpp-error-codes.html
+
             Instant prevDueTime = execution.getVariable(Constants.VAR_SMS_DUETIME, Instant.class);
             
             if (prevDueTime == null) {
@@ -102,18 +122,25 @@ public class TriageDelegate implements JavaDelegate {
                 prevDueTime = Instant.now();
             }
 
-            smsDueTime = scheduler.getFirstAvailableInstant(prevDueTime.plus(waitAfterFail));
+            smsDueTime = prevDueTime.plus(waitAfterFail);
+
+            Instant now = Instant.now();
+            if (smsDueTime.isBefore(now)) {
+                smsDueTime = now;
+            }
+
+            smsDueTime = scheduler.getFirstAvailableInstant(smsDueTime);
             deadlineInstant = scheduler.getDeadlineInstant(smsDueTime);
             
             if (smsDueTime == null) {
-                LOG.info("Not retrying [{}] request, schedule exhausted: {}:{}:{}:{}", 
-                        smsRetries+1,
+                LOG.info("No retry [{}] for {} request, schedule exhausted: {}:{}:{}:{}",
+                        smsRetries+1, smsStatus,
                         StringUtils.substringBefore(execution.getProcessInstanceId(),'-'),
                         clientId, targetId, clientKey);
             }
             else {
-                LOG.info("Will retry [{}] at {}: {}:{}:{}:{}", 
-                        smsRetries+1, smsDueTime,
+                LOG.info("Scheduling retry [{}] for {} request at {}: {}:{}:{}:{}",
+                        smsRetries+1, smsStatus, smsDueTime,
                         StringUtils.substringBefore(execution.getProcessInstanceId(),'-'),
                         clientId, targetId, clientKey);
             }
