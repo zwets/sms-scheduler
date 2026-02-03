@@ -75,8 +75,8 @@ public class TriageDelegate implements JavaDelegate {
             if (smsDueTime != null) {
                 
                 deadlineInstant = scheduler.getDeadlineInstant(smsDueTime);
-                
-                // Unless SMS is due in the next minute, add (configurable) random jitter
+
+                // Unless SMS is due in the next minute (intended immediately) add jitter
                 if (smsDueTime.isAfter(Instant.now().plusMillis(60 * 1000))) {
 
                     long jitter = Math.round(Math.random() * maxAddJitter.getSeconds());
@@ -139,6 +139,11 @@ public class TriageDelegate implements JavaDelegate {
                         clientId, targetId, clientKey);
             }
             else {
+                // Add jitter to prevent all retries to sit on the dot of start of next slot
+                long jitter = Math.round(Math.random() * maxAddJitter.getSeconds());
+                smsDueTime = smsDueTime.plusSeconds(jitter);
+                deadlineInstant = deadlineInstant.plusSeconds(jitter);
+
                 LOG.info("Scheduling retry [{}] for {} request at {}: {}:{}:{}:{}",
                         smsRetries+1, smsStatus, smsDueTime,
                         StringUtils.substringBefore(execution.getProcessInstanceId(),'-'),
